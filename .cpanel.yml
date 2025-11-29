@@ -2,8 +2,6 @@ deployment:
   tasks:
     # Paths
     - export COMPOSER_BIN=/home/quickerf/composer.phar
-    # - export REPOPATH=/home/quickerf/laravel_suites_repo/suites.quickerfaster.com
-    # - export DEPLOYPATH=/home/quickerf/public_html/suites.quickerfaster.com
     - export REPOPATH=/home/quickerf/laravel_suites_repo/quickerfaster.com
     - export DEPLOYPATH=/home/quickerf/public_html
     - export LOGDIR=/home/quickerf/deploy_logs
@@ -20,7 +18,7 @@ deployment:
     # Clean destination folder but preserve .env, .cpanel.yml, storage, bootstrap/cache
     - /bin/echo "Cleaning destination folder..." >> $LOGFILE
     - /bin/sh -c 'for f in $(/bin/ls -A "$DEPLOYPATH"); do
-        [ "$f" = ".env" ] || [ "$f" = ".cpanel.yml" ] || [ "$f" = "storage" ] || [ "$f" = "bootstrap/cache" ] || /bin/rm -rf "$DEPLOYPATH/$f";
+        [ "$f" = ".env" ] || [ "$f" = ".cpanel.yml" ] || [ "$f" = "storage" ] || [ "$f" = "bootstrap" ] || /bin/rm -rf "$DEPLOYPATH/$f";
       done' >> $LOGFILE 2>&1
 
     # Copy repository files to deployment path
@@ -35,6 +33,10 @@ deployment:
                    $DEPLOYPATH/bootstrap/cache \
                    $DEPLOYPATH/storage/logs' >> $LOGFILE 2>&1
 
+    # Set proper permissions
+    - /bin/echo "Setting permissions..." >> $LOGFILE
+    - /bin/sh -c 'chmod -R 775 "$DEPLOYPATH/storage" "$DEPLOYPATH/bootstrap/cache"' >> $LOGFILE 2>&1
+
     # Install Composer locally if missing
     - /bin/echo "Checking Composer..." >> $LOGFILE
     - /bin/sh -c 'if [ ! -f "$COMPOSER_BIN" ]; then
@@ -48,28 +50,32 @@ deployment:
 
     # Install PHP dependencies without running scripts (prevents cache errors)
     - /bin/echo "Installing PHP dependencies..." >> $LOGFILE
-    - /bin/sh -c 'cd "$DEPLOYPATH" && php "$COMPOSER_BIN" install --no-dev --no-scripts --optimize-autoloader >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php "$COMPOSER_BIN" install --no-dev --no-scripts --optimize-autoloader --ignore-platform-reqs >> "$LOGFILE" 2>&1'
+
+    # Run composer scripts separately
+    - /bin/echo "Running Composer scripts..." >> $LOGFILE
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php "$COMPOSER_BIN" run-script post-autoload-dump >> "$LOGFILE" 2>&1' || /bin/echo "No composer scripts to run or script failed" >> $LOGFILE
 
     # Run Artisan post-deploy tasks manually
     - /bin/echo "Running Artisan post-deploy tasks..." >> $LOGFILE
-    - /bin/sh -c 'php "$DEPLOYPATH/artisan" config:clear >> "$LOGFILE" 2>&1'
-    - /bin/sh -c 'php "$DEPLOYPATH/artisan" cache:clear >> "$LOGFILE" 2>&1'
-    - /bin/sh -c 'php "$DEPLOYPATH/artisan" package:discover >> "$LOGFILE" 2>&1'
-    - /bin/sh -c 'php "$DEPLOYPATH/artisan" config:cache >> "$LOGFILE" 2>&1'
-    - /bin/sh -c 'php "$DEPLOYPATH/artisan" route:cache >> "$LOGFILE" 2>&1'
-    - /bin/sh -c 'php "$DEPLOYPATH/artisan" view:cache >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan config:clear >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan cache:clear >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan package:discover >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan config:cache >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan route:cache >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan view:cache >> "$LOGFILE" 2>&1'
 
     # Run migrations
     - /bin/echo "Running migrations..." >> $LOGFILE
-    - /bin/sh -c 'php "$DEPLOYPATH/artisan" migrate --force >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan migrate --force >> "$LOGFILE" 2>&1'
 
     # Seed database
     - /bin/echo "Seeding database..." >> $LOGFILE
-    - /bin/sh -c 'php "$DEPLOYPATH/artisan" db:seed --force >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan db:seed --force >> "$LOGFILE" 2>&1'
 
     # Final cache cleanup
     - /bin/echo "Clearing caches..." >> $LOGFILE
-    - /bin/sh -c 'php "$DEPLOYPATH/artisan" optimize:clear >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan optimize:clear >> "$LOGFILE" 2>&1'
 
     # End log
     - /bin/echo "===== Deployment finished at $(date) =====" >> $LOGFILE
