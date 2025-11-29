@@ -1,0 +1,432 @@
+models:
+  Department:
+    module: hr
+    context: settings
+    fields:
+      name:
+        fillable: true
+        type: string
+        validation:
+          - required|string|max:255
+        label: Department Name
+      code:
+        fillable: true
+        autoGenerate: true
+        type: string
+        label: Department Code
+        validation:
+          - required|string|max:50|unique:departments,code
+      description:
+        fillable: true
+        type: textarea
+        modifiers:
+          nullable: true
+      # manager_id:
+      #   fillable: true
+      #   type: select
+      #   foreign:
+      #     table: employees
+      #     column: id
+      #     onDelete: set null
+      #   modifiers:
+      #     nullable: true
+      parent_department_id:
+        fillable: true
+        type: select
+        foreign:
+          table: departments
+          column: id
+          onDelete: set null
+        modifiers:
+          nullable: true
+      cost_center:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      is_active:
+        fillable: true
+        type: boolcheckbox
+        modifiers:
+          default: true
+          nullable: true
+        validation:
+          - nullable|boolean
+    hiddenFields:
+      onTable: []
+      onNewForm: []
+      onEditForm: []
+      onQuery: []
+    fieldGroups:
+      - title: Department Information
+        groupType: organization
+        fields:
+          - name
+          - code
+          - description
+          - cost_center
+      - title: Department Structure
+        groupType: organization
+        fields:
+          - parent_department_id
+          # - manager_id
+          - is_active
+    relations:
+      # manager:
+      #   type: belongsTo
+      #   model: App\Modules\Hr\Models\Employee
+      #   foreignKey: manager_id
+      #   displayField: employee_number
+      parentDepartment:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Department
+        foreignKey: parent_department_id
+        displayField: name
+      childDepartments:
+        type: hasMany
+        model: App\Modules\Hr\Models\Department
+        foreignKey: parent_department_id
+        displayField: name
+    sidebar:
+      add: true
+      context: settings
+      groupTitle: Organization
+      title: Departments
+      iconClasses: fas fa-sitemap
+      url: departments
+    topNav:
+      add: true
+      context: settings
+      title: Departments
+      iconClasses: fas fa-cog
+      url: departments
+    iconClasses: fas fa-building
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ['show', 'edit', 'delete']
+    #traits:
+    #  BelongsToTenant: Stancl\Tenancy\Database\Concerns\BelongsToTenant
+
+
+
+  JobTitle:
+    module: hr
+    context: settings
+    fields:
+      title:
+        fillable: true
+        type: string
+        validation:
+          - required|unique:job_titles,title
+      description:
+        fillable: true
+        type: textarea
+        modifiers:
+          nullable: true
+      editable:
+        type: string
+        modifiers:
+          default: Yes
+          nullable: true
+    hiddenFields:
+      onTable: []
+      onNewForm: []
+      onEditForm: []
+      onQuery: []
+    fieldGroups:
+      - title: Job Title Information
+        groupType: hr
+        fields:
+          - title
+          - description
+    sidebar:
+      context: settings
+      add: true
+      groupTitle: Organization
+      title: Job Titles
+      iconClasses: fas fa-briefcase
+      url: job-titles
+    iconClasses: fas fa-heading
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ['show', 'edit', 'delete']
+
+
+  # === NEW: Compensation Design Models ===
+  #PayGrade:
+  #  module: hr
+  #  context: settings
+  #  pageTitle: Pay Grades
+  #  fields:
+  #    name:
+  #      fillable: true
+  #      type: string
+  #      validation:
+  #        - required|unique:pay_grades,name
+  #      label: Grade Name
+  #    min_salary:
+  #      fillable: true
+  #      type: decimal
+  #      modifiers:
+  #        precision: 12,2
+  #        nullable: true
+  #      validation:
+  #        - nullable|numeric|min:0
+  #      label: Minimum Salary
+  #    max_salary:
+  #      fillable: true
+  #      type: decimal
+  #      modifiers:
+  #        precision: 12,2
+  #        nullable: true
+  #      validation:
+  #        - nullable|numeric|min:0
+  #      label: Maximum Salary
+  #    currency:
+  #      fillable: true
+  #      type: select
+  #      options: USD, EUR, GBP, CAD, AUD, INR, JPY
+  #      default: USD
+  #      validation:
+  #        - required
+  #    description:
+  #      fillable: true
+  #      type: textarea
+  #      modifiers:
+  #        nullable: true
+  #  hiddenFields:
+  #    onTable: []
+  #    onNewForm: []
+  #    onEditForm: []
+  #    onQuery: []
+  #  fieldGroups:
+  #    - title: Pay Grade Details
+  #      groupType: compensation
+  #      fields:
+  #        - name
+  #        - currency
+  #        - description
+  #    - title: Salary Range
+  #      groupType: compensation
+  #      fields:
+  #        - min_salary
+  #        - max_salary
+  #  sidebar:
+  #    add: true
+  #    context: settings
+  #    groupTitle: Compensation
+  #    title: Pay Grades
+  #    iconClasses: fas fa-layer-group
+  #    url: pay-grades
+  #  iconClasses: fas fa-scale-balanced
+  #  includeHeader: false
+  #  includeFooter: false
+  #  includeSidebar: true
+  #  controls: all
+  #  simpleActions: ['show', 'edit', 'delete']
+#
+#
+  #RoleSalary:
+  #  module: hr
+  #  context: settings
+  #  pageTitle: Role Salaries
+  #  fields:
+  #    role_id:
+  #      fillable: true
+  #      type: select
+  #      foreign:
+  #        table: roles
+  #        column: id
+  #        onDelete: cascade
+  #      validation:
+  #        - required|unique:role_salaries,role_id
+  #      label: Role
+  #    salary:
+  #      fillable: true
+  #      type: decimal
+  #      modifiers:
+  #        precision: 12,2
+  #      default: 0.00
+  #      validation:
+  #        - required|numeric|min:0
+  #      label: Base Salary
+  #    currency:
+  #      fillable: true
+  #      type: select
+  #      options: USD, EUR, GBP, CAD, AUD, INR, JPY
+  #      default: USD
+  #      validation:
+  #        - required
+  #  hiddenFields:
+  #    onTable: []
+  #    onNewForm: []
+  #    onEditForm: []
+  #    onQuery: []
+  #  fieldGroups:
+  #    - title: Role Salary Assignment
+  #      groupType: compensation
+  #      fields:
+  #        - role_id
+  #        - salary
+  #        - currency
+  #  relations:
+  #    role:
+  #      type: belongsTo
+  #      model: App\Modules\Access\Models\Role
+  #      foreignKey: role_id
+  #      displayField: name
+  #  sidebar:
+  #    add: true
+  #    context: settings
+  #    groupTitle: Compensation
+  #    title: Role Salaries
+  #    iconClasses: fas fa-coins
+  #    url: role-salaries
+  #  iconClasses: fas fa-hand-holding-dollar
+  #  includeHeader: false
+  #  includeFooter: false
+  #  includeSidebar: true
+  #  controls: all
+  #  simpleActions: ['show', 'edit', 'delete']
+  ## === END Compensation Models ===
+#
+#
+  #Policy:
+  #  module: hr
+  #  context: settings
+  #  fields:
+  #    title:
+  #      fillable: true
+  #      type: string
+  #      validation:
+  #        - required|string|max:255
+  #      label: Policy Title
+  #    policy_code:
+  #      fillable: true
+  #      autoGenerate: true
+  #      type: string
+  #      label: Policy Code
+  #      validation:
+  #        - required|string|max:50|unique:policies,policy_code
+  #    description:
+  #      fillable: true
+  #      type: textarea
+  #      modifiers:
+  #        nullable: true
+  #    policy_content:
+  #      fillable: true
+  #      type: textarea
+  #      label: Policy Content
+  #      validation:
+  #        - required
+  #    category:
+  #      fillable: true
+  #      type: select
+  #      options: Employment, Code of Conduct, Health & Safety, Benefits, Leave, Performance, IT, Other
+  #      validation:
+  #        - required
+  #    effective_date:
+  #      fillable: true
+  #      type: datepicker
+  #      validation:
+  #        - required|date
+  #    expiry_date:
+  #      fillable: true
+  #      type: datepicker
+  #      modifiers:
+  #        nullable: true
+  #    version:
+  #      fillable: true
+  #      type: string
+  #      modifiers:
+  #        default: '1.0'
+  #      validation:
+  #        - required|string|max:20
+  #    requires_acknowledgement:
+  #      fillable: true
+  #      type: checkbox
+  #      modifiers:
+  #        default: true
+  #        nullable: true
+  #      validation:
+  #        - nullable|boolean
+  #    acknowledgement_deadline:
+  #      fillable: true
+  #      type: datepicker
+  #      modifiers:
+  #        nullable: true
+  #    is_active:
+  #      fillable: true
+  #      type: boolcheckbox
+  #      modifiers:
+  #        default: true
+  #        nullable: true
+  #      validation:
+  #        - nullable|boolean
+  #    applicable_to:
+  #      fillable: true
+  #      type: select
+  #      options: All Employees, Specific Departments, Specific Locations, Specific Job Titles
+  #      modifiers:
+  #        default: All Employees
+  #      validation:
+  #        - required
+  #    attachment_path:
+  #      fillable: true
+  #      type: file
+  #      modifiers:
+  #        nullable: true
+  #      validation:
+  #        - nullable|string|max:500
+  #  hiddenFields:
+  #    onTable: []
+  #    onNewForm: []
+  #    onEditForm: []
+  #    onQuery: []
+  #  fieldGroups:
+  #    - title: Policy Information
+  #      groupType: hr
+  #      fields:
+  #        - title
+  #        - policy_code
+  #        - category
+  #        - version
+  #        - description
+  #    - title: Policy Details
+  #      groupType: hr
+  #      fields:
+  #        - policy_content
+  #        - attachment_path
+  #    - title: Effective Period
+  #      groupType: hr
+  #      fields:
+  #        - effective_date
+  #        - expiry_date
+  #    - title: Acknowledgement Settings
+  #      groupType: hr
+  #      fields:
+  #        - requires_acknowledgement
+  #        - acknowledgement_deadline
+  #    - title: Applicability & Status
+  #      groupType: hr
+  #      fields:
+  #        - applicable_to
+  #        - is_active
+  #  sidebar:
+  #    add: true
+  #    context: settings
+  #    groupTitle: People Management
+  #    title: Policies
+  #    iconClasses: fas fa-clipboard-list
+  #    url: policies
+  #  iconClasses: fas fa-file-contract
+  #  includeHeader: false
+  #  includeFooter: false
+  #  includeSidebar: true
+  #  controls: all
+  #  simpleActions: ['show', 'edit', 'delete']
+#

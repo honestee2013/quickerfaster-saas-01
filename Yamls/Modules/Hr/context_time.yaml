@@ -1,0 +1,676 @@
+models:
+  # === INTERNAL MODEL: Not exposed in sidebar or UI ===
+  ClockEvent:
+    module: hr
+    context: time
+    internal: true # Hide from CRUD UI, sidebar, and user workflows
+    fields:
+      employee_id:
+        type: string
+        validation:
+          - required
+        label: Employee ID
+
+      event_type:
+        type: select
+        options: clock_in, clock_out
+        validation:
+          - required
+
+      timestamp:
+        type: datetimepicker
+        validation:
+          - required
+
+      method:
+        type: string
+        validation:
+          - required
+        modifiers:
+          default: device
+          nullable: true
+
+      latitude:
+        type: decimal
+        modifiers:
+          precision: 10,8
+          nullable: true
+
+      longitude:
+        type: decimal
+        modifiers:
+          precision: 11,8
+          nullable: true
+
+      accuracy_meters:
+        type: integer
+        modifiers:
+          nullable: true
+
+      address:
+        type: string
+        modifiers:
+          nullable: true
+
+      ip_address:
+        type: string
+        modifiers:
+          nullable: true
+
+      device_id:
+        type: string
+        modifiers:
+          nullable: true
+
+      sync_status:
+        type: string
+        modifiers:
+          default: pending
+          nullable: true
+
+
+      sync_attempts:
+        type: integer
+        modifiers:
+          default: 0
+          nullable: true
+
+
+    hiddenFields:
+      onTable: []
+      onNewForm: []
+      onEditForm: []
+      onQuery: []
+
+    # No sidebar, no UI — purely for API ingestion
+    sidebar:
+      add: false
+      context: time
+      groupTitle: Time Tracking
+      title: Clock Events
+      iconClasses: fas fa-clock-events
+      url: clock-events
+
+    iconClasses: fas fa-clock-events
+    includeSidebar: false
+    includeHeader: false
+    includeFooter: false
+    controls: all #only for testing but it should be = none
+    simpleActions: []
+
+
+
+
+
+
+
+  # === USER-FACING MODEL: Shown in sidebar ===
+  Attendance:
+    module: hr
+    context: time
+    pageTitle: Attendance
+    fields:
+      employee_id:
+        type: string
+        validation:
+          - required
+        label: Employee ID
+
+      date:
+        type: datepicker
+        validation:
+          - required|date
+        label: Attendance Date
+
+      net_hours:
+        type: decimal
+        modifiers:
+          precision: 8,2
+        label: Net Hours Worked
+        validation:
+          - required|numeric|min:0
+
+      sessions:
+        type: json
+        label: Work Sessions
+        modifiers:
+          nullable: true
+        # Example: [{"start":"08:00","end":"12:00","duration":4.0}, ...]
+
+      status:
+        type: select
+        options: complete, incomplete, pending, holiday, leave
+        modifiers:
+          default: pending
+        validation:
+          - required
+
+      # Optional: for payroll reconciliation
+      is_approved:
+        type: boolcheckbox
+        modifiers:
+          default: false
+        validation:
+          - required|boolean
+
+      approved_by:
+        type: string
+        modifiers:
+          nullable: true
+
+      approved_at:
+        type: datetimepicker
+        modifiers:
+          nullable: true
+
+      notes:
+        type: textarea
+        modifiers:
+          nullable: true
+
+      needs_review:
+        type: checkbox
+        modifiers:
+          default: false
+        validation:
+          - required|boolean
+
+
+    hiddenFields:
+      onTable: [approved_by, approved_at, sessions]
+      onNewForm: [is_approved, approved_by, approved_at]
+      onEditForm: [is_approved, approved_by, approved_at] # Managers can approve
+      onQuery: []
+
+    fieldGroups:
+      - title: Employee & Date
+        groupType: time
+        fields: [employee_id, date, status]
+
+      - title: Hours Summary
+        groupType: time
+        fields: [net_hours]
+
+      - title: Approval
+        groupType: time
+        fields: [is_approved, approved_by, approved_at, notes]
+
+    relations:
+      employee:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Employee
+        foreignKey: employee_id
+        displayField: employee_number
+
+    sidebar:
+      add: true
+      context: time
+      groupTitle: Time Tracking
+      title: Attendance
+      iconClasses: fas fa-clock
+      url: attendances
+
+
+
+    topNav:
+      add: true
+      context: time
+      groupTitle: Time Tracking
+      title: Attendance
+      iconClasses: fas fa-clock
+      url: attendances
+
+
+    iconClasses: fas fa-user-clock
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ["show", "edit"] # No delete — immutable after approval
+    #moreActions:
+    #  - title: Approve Attendance
+    #    icon: fas fa-check-circle
+    #    updateModelField: true
+    #    fieldName: is_approved
+    #    fieldValue: true
+    #    actionName: approve_attendance
+
+
+    #indexes:
+    #  - employee_id
+    #  - date
+
+    # uniqueIndexes:
+    #   - employee_id
+    #   - date
+
+    # compoundIndexes:
+    #   - [employee_id, date]
+
+    compoundUniqueIndexes:
+      - [employee_id, date]
+
+
+
+
+
+
+  Shift:
+    module: hr
+    context: time
+    pageTitle: Shifts
+    fields:
+      name:
+        type: string
+        validation:
+          - required|string|max:255
+        label: Shift Name
+      code:
+        type: string
+        label: Shift Code
+        validation:
+          - required|string|max:50|unique:shifts,code
+      start_time:
+        type: timepicker
+        validation:
+          - required
+      end_time:
+        type: timepicker
+        validation:
+          - required
+      duration_hours:
+        type: decimal
+        modifiers:
+          precision: 4,2
+          nullable: true
+      break_duration:
+        type: decimal
+        modifiers:
+          precision: 4,2
+          default: 0.00
+        validation:
+          - required|numeric|min:0
+      is_overnight:
+        type: checkbox
+        modifiers:
+          default: false
+        validation:
+          - required|boolean
+      color:
+        type: string
+        modifiers:
+          default: "#3B82F6"
+        validation:
+          - required|string|max:7
+      description:
+        type: textarea
+        modifiers:
+          nullable: true
+      is_active:
+        type: checkbox
+        modifiers:
+          default: true
+        validation:
+          - required|boolean
+      applicable_departments:
+        type: select
+        options: All Departments, Specific Departments
+        modifiers:
+          default: All Departments
+        validation:
+          - required
+      overtime_starts_after:
+        type: decimal
+        label: Overtime Starts After (hours)
+        modifiers:
+          precision: 4,2
+          default: 8.00
+        validation:
+          - required|numeric|min:0
+      grace_period_minutes:
+        type: integer
+        modifiers:
+          default: 5
+        validation:
+          - required|integer|min:0
+      max_shift_hours:
+        type: decimal
+        modifiers:
+          precision: 4,2
+          default: 12.00
+        validation:
+          - required|numeric|min:0
+
+    hiddenFields:
+      onTable: []
+      onNewForm: [duration_hours]
+      onEditForm: []
+      onQuery: []
+
+    fieldGroups:
+      - title: Basic Shift Information
+        groupType: time
+        fields: [name, code, description, color, is_active]
+      - title: Shift Timing
+        groupType: time
+        fields:
+          [start_time, end_time, duration_hours, is_overnight, break_duration]
+      - title: Shift Rules
+        groupType: time
+        fields: [overtime_starts_after, grace_period_minutes, max_shift_hours]
+      - title: Applicability
+        groupType: time
+        fields: [applicable_departments]
+
+    relations:
+      shiftSchedules:
+        type: hasMany
+        model: App\Modules\Hr\Models\ShiftSchedule
+        foreignKey: shift_id
+        displayField: schedule_date
+      attendanceRecords:
+        type: hasMany
+        model: App\Modules\Hr\Models\Attendance
+        foreignKey: shift_id
+        displayField: date
+
+    sidebar:
+      add: true
+      context: time
+      groupTitle: Scheduling
+      title: Shifts
+      iconClasses: fas fa-calendar-day
+      url: shifts
+
+    iconClasses: fas fa-clock
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ["show", "edit", "delete"]
+
+  Timesheet:
+    module: hr
+    context: time
+    pageTitle: Timesheets
+    fields:
+      employee_id:
+        fillable: true
+        type: string
+        validation:
+          - required
+      week_starting:
+        fillable: true
+        type: datepicker
+        label: Week Starting (Monday)
+        validation:
+          - required|date
+      status:
+        fillable: true
+        type: select
+        options: Draft, Submitted, Approved, Rejected
+        modifiers:
+          default: Draft
+        validation:
+          - required
+      submitted_at:
+        fillable: true
+        type: datetimepicker
+        modifiers:
+          nullable: true
+      approved_at:
+        fillable: true
+        type: datetimepicker
+        modifiers:
+          nullable: true
+      approved_by:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      notes:
+        fillable: true
+        type: textarea
+        modifiers:
+          nullable: true
+
+    hiddenFields:
+      onTable: []
+      onNewForm: [submitted_at, approved_at, approved_by]
+      onEditForm: [approved_at, approved_by]
+      onQuery: []
+
+    fieldGroups:
+      - title: Timesheet Header
+        groupType: time
+        fields: [employee_id, week_starting, status]
+      - title: Approval
+        groupType: time
+        fields: [submitted_at, approved_at, approved_by, notes]
+
+    relations:
+      employee:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Employee
+        foreignKey: employee_id
+        displayField: employee_number
+      approver:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Employee
+        foreignKey: approved_by
+        displayField: employee_number
+      timesheetEntries:
+        type: hasMany
+        model: App\Modules\Hr\Models\TimesheetEntry
+        foreignKey: timesheet_id
+        displayField: date
+
+    sidebar:
+      add: true
+      context: time
+      groupTitle: Time Tracking
+      title: Timesheets
+      iconClasses: fas fa-file-alt
+      url: timesheets
+
+    iconClasses: fas fa-table
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ["show", "edit", "delete"]
+
+
+  TimesheetEntry:
+    module: hr
+    context: time
+    fields:
+      timesheet_id:
+        fillable: true
+        type: string
+        validation:
+          - required
+      date:
+        fillable: true
+        type: datepicker
+        validation:
+          - required|date
+      hours_worked:
+        fillable: true
+        type: decimal
+        modifiers:
+          precision: 4,2
+        validation:
+          - required|numeric|min:0
+      project_code:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      task_description:
+        fillable: true
+        type: textarea
+        modifiers:
+          nullable: true
+
+    hiddenFields:
+      onTable: [timesheet_id]
+      onNewForm: []
+      onEditForm: []
+      onQuery: []
+
+    fieldGroups:
+      - title: Daily Entry
+        groupType: time
+        fields: [date, hours_worked, project_code, task_description]
+
+    relations:
+      timesheet:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Timesheet
+        foreignKey: timesheet_id
+
+
+    sidebar:
+      add: false
+      context: time
+      groupTitle: Scheduling
+      title: Holiday Calendars
+      iconClasses: fas fa-calendar-plus
+      url: holiday-calendars
+
+    iconClasses: fas fa-gift
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    # controls: all
+    simpleActions: []
+
+
+
+
+  HolidayCalendar:
+    module: hr
+    context: time
+    pageTitle: Holiday Calendar
+    fields:
+      name:
+        fillable: true
+        type: string
+        validation:
+          - required|string|max:100
+        label: Calendar Name
+      country_code:
+        fillable: true
+        type: string
+        validation:
+          - required|size:2
+        label: Country
+      is_default:
+        fillable: true
+        type: checkbox
+        label: Default Calendar
+        modifiers:
+          default: false
+        validation:
+          - boolean
+
+    hiddenFields:
+      onTable: []
+      onNewForm: []
+      onEditForm: []
+      onQuery: []
+
+    fieldGroups:
+      - title: Calendar Settings
+        groupType: time
+        fields: [name, country_code, is_default]
+
+    relations:
+      holidays:
+        type: hasMany
+        model: App\Modules\Hr\Models\Holiday
+        foreignKey: calendar_id
+        displayField: name
+
+    sidebar:
+      add: true
+      context: time
+      groupTitle: Scheduling
+      title: Holiday Calendars
+      iconClasses: fas fa-calendar-plus
+      url: holiday-calendars
+
+    iconClasses: fas fa-calendar-alt
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ["show", "edit", "delete"]
+
+
+
+  Holiday:
+    module: hr
+    context: time
+    fields:
+      calendar_id:
+        fillable: true
+        type: string
+        validation:
+          - required
+      name:
+        fillable: true
+        type: string
+        validation:
+          - required|string|max:100
+      date:
+        fillable: true
+        type: datepicker
+        validation:
+          - required|date
+      is_recurring:
+        fillable: true
+        type: checkbox
+        modifiers:
+          default: true
+        validation:
+          - boolean
+      description:
+        fillable: true
+        type: textarea
+        modifiers:
+          nullable: true
+
+    hiddenFields:
+      onTable: []
+      onNewForm: []
+      onEditForm: []
+      onQuery: []
+
+    fieldGroups:
+      - title: Holiday Details
+        groupType: time
+        fields: [calendar_id, name, date, is_recurring, description]
+
+    relations:
+      calendar:
+        type: belongsTo
+        model: App\Modules\Hr\Models\HolidayCalendar
+        foreignKey: calendar_id
+        displayField: name
+
+    sidebar:
+      add: false
+      context: time
+      groupTitle: Scheduling
+      title: Holiday Calendars
+      iconClasses: fas fa-calendar-plus
+      url: holiday-calendars
+
+    iconClasses: fas fa-gift
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    # controls: all
+    simpleActions: []

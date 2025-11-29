@@ -1,0 +1,588 @@
+models:
+  PaySchedule:
+    module: hr
+    context: payroll
+    pageTitle: Pay Schedules
+    fields:
+      name:
+        fillable: true
+        type: string
+        label: Schedule Name
+        validation:
+          - required|string|max:100
+
+      frequency:
+        fillable: true
+        type: select
+        label: Pay Frequency
+        options: Weekly, Bi-weekly, Semi-monthly, Monthly
+        validation:
+          - required
+
+      next_pay_date:
+        fillable: true
+        type: datepicker
+        label: Next Pay Date
+        validation:
+          - required|date
+        formatter: QuickerFaster\LaravelUI\Formatting\DateTimeFormatter
+
+
+      is_active:
+        fillable: true
+        type: boolcheckbox
+        label: Active
+        modifiers:
+          default: true
+        validation:
+          - nullable|boolean
+        formatter: QuickerFaster\LaravelUI\Formatting\BooleanFormatter
+
+    hiddenFields:
+      onTable: []
+      onNewForm: []
+      onEditForm: []
+      onQuery: []
+
+    fieldGroups:
+      schedule_details:
+        title: Schedule Details
+        groupType: payroll
+        fields:
+          - name
+          - frequency
+          - next_pay_date
+          - is_active
+
+    sidebar:
+      add: true
+      context: payroll
+      title: Pay Schedules
+      iconClasses: fas fa-calendar-alt
+      url: pay-schedules
+
+    iconClasses: fas fa-clock
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ['show', 'edit', 'delete']
+
+
+
+  EmployeePayrollProfile:
+    module: hr
+    context: payroll
+    pageTitle: Payroll Employees
+    fields:
+      employee_id:
+        fillable: true
+        type: select
+        label: Employee
+        foreign:
+          table: employees
+          column: id
+          onDelete: cascade
+        validation:
+          - required|exists:employees,id
+
+      pay_schedule_id:
+        fillable: true
+        type: select
+        label: Pay Schedule
+        foreign:
+          table: pay_schedules
+          column: id
+          onDelete: restrict
+        validation:
+          - required|exists:pay_schedules,id
+
+      bank_account:
+        fillable: true
+        type: encrypted_string
+        label: Bank Account Number
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string
+
+      bank_routing:
+        fillable: true
+        type: encrypted_string
+        label: Routing Number (US) / Sort Code (UK)
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string
+
+      tax_filing_status:
+        fillable: true
+        type: select
+        label: Tax Filing Status
+        options: Single, Married Filing Jointly, Married Filing Separately, Head of Household, Qualifying Widow
+        modifiers:
+          nullable: true
+        validation:
+          - nullable
+
+      allowances:
+        fillable: true
+        type: integer
+        label: Withholding Allowances (W-4)
+        modifiers:
+          default: 0
+          nullable: true
+        validation:
+          - nullable|integer|min:0
+
+      is_exempt_from_federal_tax:
+        fillable: true
+        type: checkbox
+        label: Exempt from Federal Income Tax
+        modifiers:
+          default: false
+          nullable: true
+
+      currency:
+        fillable: true
+        type: select
+        label: Payment Currency
+        options: USD, EUR, GBP, CAD, AUD, INR, NGN
+        modifiers:
+          default: USD
+        validation:
+          - required
+
+    hiddenFields:
+      onTable: []
+      onNewForm: []
+      onEditForm: []
+      onQuery: []
+
+    fieldGroups:
+      employee_link:
+        title: Employee
+        groupType: payroll
+        fields:
+          - employee_id
+          - pay_schedule_id
+          - currency
+
+      bank_details:
+        title: Bank Information
+        groupType: payroll
+        fields:
+          - bank_account
+          - bank_routing
+
+      tax_withholding:
+        title: Tax Withholding (US Example)
+        groupType: payroll
+        fields:
+          - tax_filing_status
+          - allowances
+          - is_exempt_from_federal_tax
+
+    relations:
+      employee:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Employee
+        foreignKey: employee_id
+        displayField: employee_number
+        hintField: first_name
+
+      paySchedule:
+        type: belongsTo
+        model: App\Modules\Hr\Models\PaySchedule
+        foreignKey: pay_schedule_id
+        displayField: name
+
+    sidebar:
+      add: true
+      context: payroll
+      title: Employees
+      iconClasses: fas fa-user-tie
+      url: employee-payroll-profiles
+
+
+    topNav:
+      add: true
+      context: payroll
+      title: Employees
+      iconClasses: fas fa-dollar-sign
+      url: employee-payroll-profiles
+
+    iconClasses: fas fa-user-tie
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ['show', 'edit', 'delete']
+
+
+
+  PayrollRun:
+    module: hr
+    context: payroll
+    pageTitle: Pay Runs
+    fields:
+      pay_schedule_id:
+        fillable: true
+        type: select
+        label: Pay Schedule
+        foreign:
+          table: pay_schedules
+          column: id
+          onDelete: restrict
+        validation:
+          - required|exists:pay_schedules,id
+
+      period_start:
+        fillable: true
+        type: datepicker
+        label: Pay Period Start
+        validation:
+          - required|date
+
+      period_end:
+        fillable: true
+        type: datepicker
+        label: Pay Period End
+        validation:
+          - required|date|after:period_start
+
+      status:
+        fillable: true
+        type: select
+        label: Status
+        options: Draft, Approved, Paid, Cancelled
+        modifiers:
+          default: Draft
+        validation:
+          - required
+
+      processed_by:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+
+      processed_at:
+        fillable: true
+        type: datetimepicker
+        modifiers:
+          nullable: true
+
+      notes:
+        fillable: true
+        type: textarea
+        modifiers:
+          nullable: true
+
+    hiddenFields:
+      onTable: []
+      onNewForm: [processed_by, processed_at]
+      onEditForm: [processed_by, processed_at]
+      onQuery: []
+
+    fieldGroups:
+      run_details:
+        title: Pay Run Details
+        groupType: payroll
+        fields:
+          - pay_schedule_id
+          - period_start
+          - period_end
+          - status
+          - notes
+
+      processing_info:
+        title: Processing
+        groupType: payroll
+        fields:
+          - processed_by
+          - processed_at
+
+    relations:
+      paySchedule:
+        type: belongsTo
+        model: App\Modules\Hr\Models\PaySchedule
+        foreignKey: pay_schedule_id
+        displayField: name
+
+      payslips:
+        type: hasMany
+        model: App\Modules\Hr\Models\PayrollPayslip
+        foreignKey: payroll_run_id
+        displayField: net_pay
+
+    sidebar:
+      add: true
+      context: payroll
+      title: Pay Runs
+      iconClasses: fas fa-file-invoice-dollar
+      url: payroll-runs
+
+    iconClasses: fas fa-money-bill-wave
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    dispatchEvents: true
+
+    controls:
+      addButton:
+        - label: "New Pay Run"
+          type: quick_add
+          icon: fas fa-plus
+          primary: true
+      files:
+        export: [xls, csv, pdf]
+        print: true
+      bulkActions:
+        export: [xls, csv, pdf]
+      perPage: [5, 10, 25, 50]
+      search: true
+      showHideColumns: true
+
+    # simpleActions: ['show', 'edit']
+    simpleActions: ['show']  # Remove 'edit', 'delete' for payroll runs
+
+    moreActions:
+      # For DRAFT runs
+      - title: Preview Payroll
+        icon: fas fa-eye
+        dispatchEvent: true
+        eventName: openPayrollPreviewModalEvent
+        params:
+          payroll_run_id: '{id}'
+        condition:
+          - status: draft
+
+      - title: Approve Payroll
+        icon: fas fa-check-circle
+        updateModelField: true
+        fieldName: status
+        fieldValue: approved
+        actionName: approve_payroll
+        confirm: "Approve this payroll run? This will lock all data."
+        condition:
+          - status: draft
+
+      - title: Cancel Run
+        icon: fas fa-ban
+        updateModelField: true
+        fieldName: status
+        fieldValue: cancelled
+        actionName: cancel_payroll
+        confirm: "Cancel this payroll run? This cannot be undone."
+        condition:
+          - status: ['draft', 'approved']
+
+      # For APPROVED runs
+      - title: Mark as Paid
+        icon: fas fa-money-check
+        updateModelField: true
+        fieldName: status
+        fieldValue: paid
+        actionName: mark_paid
+        confirm: "Confirm payment has been processed externally?"
+        condition:
+          - status: approved
+
+      # For APPROVED/PAID runs
+      - title: View Report
+        icon: fas fa-file-alt
+        route: payroll.reports.show
+        params:
+          payrollRun: "{id}"
+        condition:
+          - status: ['approved', 'paid']
+
+
+        # handleByEventHandlerOnly: true
+
+
+
+
+
+  PayrollPayslip:
+    module: hr
+    context: payroll
+    pageTitle: Payslips
+    fields:
+      payslip_number:
+        fillable: true
+        type: string
+        label: Payslip Number
+        validation:
+          - required|string|max:50|unique:payroll_payslips,payslip_number
+
+
+      payroll_run_id:
+        fillable: true
+        type: select
+        foreign:
+          table: payroll_runs
+          column: id
+          onDelete: cascade
+        validation:
+          - required|exists:payroll_runs,id
+
+      employee_id:
+        fillable: true
+        type: select
+        foreign:
+          table: employees
+          column: id
+          onDelete: restrict
+        validation:
+          - required|exists:employees,id
+
+      base_salary:
+        fillable: true
+        type: decimal
+        label: Base Salary (Period)
+        modifiers:
+          precision: 12,2
+        validation:
+          - required|numeric|min:0
+
+      gross_pay:
+        fillable: true
+        type: decimal
+        modifiers:
+          precision: 12,2
+        validation:
+          - required|numeric|min:0
+
+      total_deductions:
+        fillable: true
+        type: decimal
+        modifiers:
+          precision: 12,2
+        default: 0.00
+        validation:
+          - required|numeric|min:0
+
+      net_pay:
+        fillable: true
+        type: decimal
+        modifiers:
+          precision: 12,2
+        validation:
+          - required|numeric|min:0
+
+      paid_at:
+        fillable: true
+        type: datetimepicker
+        modifiers:
+          nullable: true
+
+    hiddenFields:
+      onTable: [payroll_run_id]
+      onNewForm: [paid_at]
+      onEditForm: [paid_at]
+      onQuery: []
+
+    fieldGroups:
+      employee_info:
+        title: Employee
+        groupType: payroll
+        fields:
+          - employee_id
+
+      earnings:
+        title: Earnings
+        groupType: payroll
+        fields:
+          - base_salary
+          - gross_pay
+
+      deductions:
+        title: Deductions
+        groupType: payroll
+        fields:
+          - total_deductions
+
+      net_pay:
+        title: Net Pay
+        groupType: payroll
+        fields:
+          - net_pay
+          - paid_at
+
+    relations:
+      payrollRun:
+        type: belongsTo
+        model: App\Modules\Hr\Models\PayrollRun
+        foreignKey: payroll_run_id
+        displayField: period_end
+
+      employee:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Employee
+        foreignKey: employee_id
+        displayField: employee_number
+        hintField: first_name
+
+    # Note: Payslips are system-generated; no manual create/edit
+    sidebar:
+      add: false
+      context: payroll
+      title: Payslips
+      iconClasses: fas fa-receipt
+      url: payroll-payslips
+
+    iconClasses: fas fa-receipt
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls:
+      files:
+        export: [pdf]
+        print: true
+      perPage: [10, 25, 50]
+      search: true
+
+    simpleActions: ['show']
+    switchViews:
+      detail:
+        layout: tab
+        detailType: record
+        titleFields: ['employee.first_name', 'employee.last_name']
+        subtitleFields: ['net_pay', 'paid_at']
+        contentFields: ['base_salary', 'gross_pay', 'total_deductions']
+
+
+    report:
+      model: PayrollRun
+      itemsModel: PayrollPayslip  # ← Cleaner, payroll-specific
+      headerFields: [title, payroll_number, pay_period_start, pay_period_end, status]
+      summaryFields:
+        gross_pay: Total Gross Pay
+        total_deductions: Total Deductions
+        net_pay: Total Net Pay
+      signatories:
+        - label: Prepared By
+          field: created_by
+        - label: Approved By
+          field: approved_by
+      foreignKey: payroll_run_id
+
+
+
+# Optional: Add a Reports landing page (static)
+#  PayrollReport:
+#    module: hr
+#    context: payroll
+#    virtual: true  # Not a real DB model
+#    pageTitle: Payroll Reports
+#    sidebar:
+#      add: false
+#      context: payroll
+#      title: Reports
+#      iconClasses: fas fa-chart-bar
+#      url: payroll-reports
+#    includeHeader: false
+#    includeFooter: false
+#    includeSidebar: true

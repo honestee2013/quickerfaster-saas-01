@@ -1,0 +1,1087 @@
+models:
+  # Consider adding user_id for tracking who created/updated records and role_id for role-based access control if needed.
+  Employee:
+    module: hr
+    context: people
+    fields:
+      employee_number:
+        fillable: true
+        autoGenerate: true
+        type: string
+        label: Employee Number
+        validation:
+          - required|unique:employees,employee_number
+        wizard:
+          employee_onboarding: true  # Auto-generated but shown for reference
+
+
+      first_name:
+        fillable: true
+        type: string
+        validation:
+          - required|string|max:255
+        wizard:
+          employee_onboarding: true
+
+      last_name:
+        fillable: true
+        type: string
+        validation:
+          - required|string|max:255
+        wizard:
+          employee_onboarding: true
+
+      phone:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+
+      hire_date:
+        fillable: true
+        type: datepicker
+        validation:
+          - required
+        wizard:
+          employee_onboarding: true
+
+
+      department_id:
+        fillable: true
+        type: select
+        foreign:
+          table: departments
+          column: id
+          onDelete: restrict
+        validation:
+          - required|integer
+        wizard:
+          employee_onboarding: true
+
+      status:
+        fillable: true
+        type: select
+        options: Active,Inactive,Terminated
+        validation:
+          - required
+        wizard:
+          employee_onboarding: true  # Default to "Active"
+
+      date_of_birth:
+        fillable: true
+        type: datepicker
+        validation:
+          - nullable|date
+        modifiers:
+          nullable: true
+
+      gender:
+        fillable: true
+        type: select
+        options: Male, Female, Non-binary, Prefer not to say
+        modifiers:
+          nullable: true
+        validation:
+          - nullable
+
+      email:
+        fillable: true
+        type: string
+        validation:
+          - required|email|unique:employees,email
+        wizard:
+          employee_onboarding: true  # Work email = system login
+
+      user_id:
+        type: select
+        label: Login Name
+        fillable: true
+        foreign:
+          table: users
+          column: id
+          onDelete: set null
+        validation:
+          - nullable|unique:employees,user_id
+        modifiers:
+          nullable: true
+        #wizard:
+        #  employee_onboarding: true  # Optional but recommended
+
+
+      nationality:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      marital_status:
+        fillable: true
+        type: select
+        options: Single, Married, Divorced, Widowed
+        modifiers:
+          nullable: true
+      address_street:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      address_city:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      address_state:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      address_postal_code:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      address_country:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+    hiddenFields:
+      onTable: []
+      onNewForm: []
+      onEditForm: []
+      onQuery: []
+    # tab:
+    #   label: Employees
+    #   group: employee-management
+    #   id: employees
+    #   parentPageTitle: Employee Management
+    #   pageTitle: Employees
+    #   view: employees
+    #   url: hr/employees
+    fieldGroups:
+      personal_information:
+        title: Personal Information
+        #addToWizard:
+        #  - wizardId: enployee-enrolment
+        #  - wizardStep: 2
+        #  - minEntry: 1
+        #  - maxEntry: 1
+        groupType: hr
+        fields:
+          - first_name
+          - last_name
+          - date_of_birth
+          - gender
+          - marital_status
+          - nationality
+      contact_information:
+        title: Contact Information
+        groupType: hr
+        fields:
+          - phone
+          - address_street
+          - address_city
+          - address_state
+          - address_postal_code
+          - address_country
+      employment_details:
+        title: Employment Details
+        groupType: hr
+        fields:
+          - employee_number
+          - email
+          - user_id
+          - hire_date
+          - department_id
+          - status
+
+    relations:
+      department:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Department
+        foreignKey: department_id
+        displayField: name
+      documents:
+        type: hasMany
+        model: App\Modules\Hr\Models\Document
+        foreignKey: employee_id
+        displayField: name
+        addToDetail: true
+        url: 'hr/documents'
+        index: 'hr/employees'
+      employeeProfile:
+        type: hasOne
+        model: App\Modules\Hr\Models\EmployeeProfile
+        foreignKey: employee_id
+        displayField: employee_number
+        hintField: first_name
+
+      employeePosition:
+        type: hasOne
+        model: App\Modules\Hr\Models\EmployeePosition
+        foreignKey: employee_id
+        displayField: jobTitle.title
+        hintField: department.name
+
+
+      user:
+        type: belongsTo
+        model: App\Models\User
+        foreignKey: user_id
+        displayField: name
+        hintField: email
+
+    sidebar:
+      add: true
+      context: people
+      title: Employees
+      # iconClasses: fas fa-users
+      iconClasses: fas fa-user-friends
+      url: employees
+
+    topNav:
+      add: true
+      context: people
+      title: Employees
+      iconClasses: fas fa-user-friends
+      url: employees
+
+    switchViews:
+      default: list
+      card:
+        titleFields: ['first_name', 'last_name'] # eg John Joe
+        subtitleFields: ['email', 'phone'] # email@domain.com
+        contentFields: ['gender', 'date_of_birth'] # *Male * May 30, 1985
+      list:
+        titleFields: ['first_name', 'last_name'] # eg John Joe
+        subtitleFields: ['email', 'phone'] # email@domain.com
+        contentFields: ['gender', 'date_of_birth'] # *Male * May 30, 1985
+      detail:
+        layout: tab  # or "single", "accordion"
+        detailType: profile # or document or record
+        # imageField: ['photo']
+        icon: fas fa-user-profile
+        titleFields: ['first_name', 'last_name'] # eg John Joe
+        subtitleFields: ['email', 'phone'] # email@domain.com
+        contentFields: ['gender', 'date_of_birth'] # *Male * May 30, 1985
+        headerLink:
+          - label: Documents
+          - url: '/hr/documents?employee_id={id}'
+          - returnTo: '/hr/employees'
+
+
+    iconClasses: fas fa-users
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    simpleActions: ['show', 'edit', 'delete']
+    controls:
+      addButton:
+        - label: "Add Employee"           # user-facing text
+          type: quick_add                 # action type
+          icon: fas fa-plus               # optional
+          primary: true                   # appears as main button
+
+        - label: "Onboard New Hire (Guided)"
+          type: wizard
+          url: /hr/employee-onboarding
+          wizard: employee_onboarding     # wizard ID from wizards config
+          icon: fas fa-user-plus
+
+        - label: "Quickly Add"
+          type: quick_add
+          icon: fas fa-edit
+
+
+
+      files:
+        export: [xls, csv, pdf]
+        print: true
+
+      bulkActions:
+        export: [xls, csv, pdf]
+        delete: true
+
+      perPage: [5, 10, 25, 50, 100, 200, 500]
+      search: true
+      showHideColumns: true
+
+
+
+
+
+  EmployeePosition:
+    module: hr
+    context: people
+    pageTitle: Job Information
+    fields:
+      employee_id:
+        fillable: true
+        type: select
+        foreign:
+          table: employees
+          column: id
+          onDelete: cascade
+        validation:
+          - required|exists:employees,id
+
+      job_title_id:
+        fillable: true
+        type: select
+        foreign:
+          table: job_titles
+          column: id
+          onDelete: restrict
+        validation:
+          - required|exists:job_titles,id
+        wizard:
+          employee_onboarding: true
+
+      department_id:
+        fillable: true
+        type: select
+        foreign:
+          table: departments
+          column: id
+          onDelete: restrict
+        validation:
+          - required|exists:departments,id
+        wizard:
+          employee_onboarding: true
+
+      manager_id:
+        fillable: true
+        type: select
+        foreign:
+          table: employees
+          column: id
+          onDelete: set null
+        modifiers:
+          nullable: true
+        wizard:
+          employee_onboarding: true
+
+      pay_type:
+        fillable: true
+        type: select
+        options:
+          hourly: Hourly
+          salaried_daily: "Salaried (Daily Attendance Required)"
+          salaried_full: "Salaried (Full Monthly Salary)"
+        validation:
+          - required
+        label: Pay Type
+        wizard:
+          employee_onboarding: true
+
+      hourly_rate:
+        fillable: true
+        type: decimal
+        modifiers:
+          precision: 10,2
+          default: 0.00
+          nullable: true
+        validation:
+          - required|numeric|min:0
+        wizard:
+          employee_onboarding: true  # For hourly employees
+
+
+      employment_status:
+        fillable: true
+        type: select
+        options: Active, On Leave, Terminated, Suspended
+        validation:
+          - required
+        wizard:
+          employee_onboarding: true  # Default to "Active"
+
+      location_id:
+        fillable: true
+        type: select
+        foreign:
+          table: locations
+          column: id
+          onDelete: restrict
+        modifiers:
+          nullable: true
+        wizard:
+          employee_onboarding: true  # Optional but useful
+
+      start_date:
+        fillable: true
+        type: datepicker
+        validation:
+          - required|date
+        wizard:
+          employee_onboarding: true  # Often same as hire_date
+
+      end_date:
+        fillable: true
+        type: datepicker
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|date|after:start_date
+
+      # Defer compensation to offer letter/payroll setup
+      base_salary:
+        fillable: true
+        type: decimal
+        modifiers:
+          precision: 10,2
+          default: 0.00
+          nullable: true
+        validation:
+          - required|numeric|min:0
+        wizard:
+          employee_onboarding: true  # For salaried employees
+
+
+
+
+      salary_currency:
+        fillable: true
+        type: select
+        options: USD, EUR, GBP, JPY, CAD, AUD, INR, NGN
+        modifiers:
+          default: USD
+          nullable: true
+        validation:
+          - required
+        wizard:
+          employee_onboarding: true  # Important for international firms
+
+
+      pay_frequency:
+        fillable: true
+        type: select
+        options: Monthly, Semi-monthly, Bi-weekly, Weekly, Daily
+        validation:
+          - required
+        modifiers:
+          nullable: true
+        wizard:
+          employee_onboarding: true  # Important for payroll scheduling
+
+
+      # Defer non-essential fields
+      cost_center:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      work_email:
+        fillable: true
+        type: string
+        validation:
+          - nullable|email|unique:employee_positions,work_email
+        modifiers:
+          nullable: true
+        wizard:
+          employee_onboarding: true
+
+      work_phone_extension:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      reports_to:
+        fillable: true
+        type: select
+        foreign:
+          table: employees
+          column: id
+          onDelete: set null
+        modifiers:
+          nullable: true
+      job_description:
+        fillable: true
+        type: textarea
+        modifiers:
+          nullable: true
+
+
+      is_primary:
+        fillable: true
+        type: boolradio
+        options: Yes, No
+        modifiers:
+          nullable: true
+        validation:
+          - nullable
+
+    hiddenFields:
+      onTable: []
+      onNewForm: []
+      onEditForm: []
+      onQuery: []
+    # tab:
+    #   label: Jobs
+    #   group: people-management
+    #   id: jobs
+    #   parentPageTitle: People Management
+    #   pageTitle: Employee Jobs
+    #   view: jobs
+    #   url: hr/jobs
+    fieldGroups:
+      job_information:
+        title: Job Information
+        groupType: hr
+        fields:
+          - employee_id
+          - job_title_id
+          - department_id
+          - manager_id
+          - reports_to
+      employment_details:
+        title: Employment Details
+        groupType: hr
+        fields:
+          - pay_type
+          - employment_status
+          - location_id
+          - start_date
+          - end_date
+          - cost_center
+      compensation:
+        title: Compensation
+        groupType: hr
+        fields:
+          - base_salary
+          - hourly_rate
+          - pay_frequency
+          - salary_currency
+      contact_information:
+        title: Contact Information
+        groupType: hr
+        fields:
+          - work_email
+          - work_phone_extension
+      additional_information:
+        title: Additional Information
+        groupType: hr
+        fields:
+          - job_description
+          - is_primary
+    relations:
+      employee:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Employee
+        foreignKey: employee_id
+        displayField: employee_number
+        hintField: first_name
+      jobTitle:
+        type: belongsTo
+        model: App\Modules\Hr\Models\JobTitle
+        foreignKey: job_title_id
+        displayField: title
+      department:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Department
+        foreignKey: department_id
+        displayField: name
+      manager:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Employee
+        foreignKey: manager_id
+        displayField: employee_number
+        hintField: first_name
+
+      reportsTo:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Employee
+        foreignKey: reports_to
+        displayField: employee_number
+        hintField: first_name
+
+      location:
+        type: belongsTo
+        model: App\Modules\Admin\Models\Location
+        foreignKey: location_id
+        displayField: name
+      # directReports:
+      #   type: hasMany
+      #   model: App\Modules\Hr\Models\Job
+      #   foreignKey: reports_to
+      #   displayField: employee.employee_number
+    sidebar:
+      add: true
+      context: people
+      # groupTitle: People Management
+      title: Job Information
+      iconClasses: fas fa-briefcase
+      url: employee-positions
+      # submenu:
+      #   - title: Employee Profiles
+      #     url: employee-profiles
+      #   - title: Jobs
+      #     url: jobs
+      #   - title: Documents
+      #     url: documents
+      #   - title: Policies
+      #     url: policies
+
+
+    iconClasses: fas fa-suitcase
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ['show', 'edit', 'delete']
+    # moreActions:
+    #   - title: View Employment History
+    #     icon: fas fa-history
+    #     route: employment.history
+    #   - title: Export Job Details
+    #     icon: fas fa-file-export
+    #     route: export.job.details
+
+    noCasts: ['start_date', 'end_date']
+
+
+
+
+  EmployeeProfile:
+    module: hr
+    pageTitle: Profiles
+    context: people
+    fields:
+      photo:
+        type: file
+        fileTypes: image
+        modifiers:
+          nullable: true
+
+      employee_id:
+        fillable: true
+        label: Employee Number
+        type: select
+        foreign:
+          table: employees
+          column: id
+          onDelete: cascade
+        validation:
+          - required|unique:employee_profiles,employee_id
+      middle_name:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      preferred_name:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      personal_email:
+        fillable: true
+        type: string
+        validation:
+          - required|email|unique:employee_profiles,personal_email
+      personal_phone:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      work_phone:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      emergency_contact_name:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      emergency_contact_phone:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      emergency_contact_relationship:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      passport_number:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      passport_expiry_date:
+        fillable: true
+        type: datepicker
+        modifiers:
+          nullable: true
+      national_id_number:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      bio:
+        fillable: true
+        type: textarea
+        modifiers:
+          nullable: true
+
+    hiddenFields:
+      onTable: []
+      onNewForm: []
+      onEditForm: []
+      onQuery: []
+    fieldGroups:
+      extended_personal_information:
+        title: Extended Personal Information
+        groupType: hr
+        fields:
+          - photo
+          - employee_id
+          - middle_name
+          - preferred_name
+          - bio
+      additional_contact_information:
+        title: Additional Contact Information
+        groupType: hr
+        fields:
+          - personal_email
+          - personal_phone
+          - work_phone
+      emergency_contact:
+        title: Emergency Contact
+        groupType: hr
+        fields:
+          - emergency_contact_name
+          - emergency_contact_phone
+          - emergency_contact_relationship
+      identification_documents:
+        title: Identification Documents
+        groupType: hr
+        fields:
+          - passport_number
+          - passport_expiry_date
+          - national_id_number
+    relations:
+      employee:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Employee
+        foreignKey: employee_id
+        displayField: employee_number
+        hintField: first_name
+
+    sidebar:
+      add: true
+      context: people
+      title: Profiles
+      iconClasses: fas fa-user-circle
+      url: employee-profiles
+
+    iconClasses: fas fa-user-tie
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ['show', 'edit', 'delete']
+
+
+
+
+  Document:
+    module: hr
+    context: people
+
+    fields:
+      employee_id:
+        fillable: true
+        label: Employee Number
+        type: select
+        foreign:
+          table: employees
+          column: id
+          onDelete: cascade
+        validation:
+          - required|unique:documents,employee_id
+
+      document:
+        fillable: true
+        type: file
+        fileType: document
+        validation:
+          - required|file|max:1024 # Max 1MB
+
+      name:
+        fillable: true
+        type: string
+        validation:
+          - required|string|max:255
+        label: Document Name
+
+      type:
+        fillable: true
+        type: select
+        options: Resume, Contract, Offer Letter, ID Proof, Visa, Certificate, Performance Review, Other
+        validation:
+          - required
+
+
+      uploaded_at:
+        fillable: true
+        type: datepicker
+        validation:
+          - nullable|date
+        modifiers:
+          nullable: true
+
+
+      expiry_date:
+        fillable: true
+        type: datepicker
+        modifiers:
+          nullable: true
+      description:
+        fillable: true
+        type: textarea
+        modifiers:
+          nullable: true
+    hiddenFields:
+      onTable: []
+      onNewForm:
+        - uploaded_at
+      onEditForm:
+        - uploaded_at
+      onQuery: []
+    # tab:
+    #   label: Documents
+    #   group: people-management
+    #   id: documents
+    #   parentPageTitle: People Management
+    #   pageTitle: Documents
+    #   view: documents
+    #   url: hr/documents
+    fieldGroups:
+      document_details:
+        title: Document Details
+        groupType: hr
+        fields:
+          - employee_id
+          - name
+          - type
+          - description
+      file_information:
+        title: File Information
+        groupType: hr
+        fields:
+          - document
+          - uploaded_at
+          - expiry_date
+
+    relations:
+      employee:
+        type: belongsTo
+        model: App\Modules\Hr\Models\Employee
+        foreignKey: employee_id
+        displayField: employee_number
+        hintField: first_name
+
+    sidebar:
+      add: true
+      context: people
+      groupTitle: People Management
+      title: Documents
+      iconClasses: fas fa-file
+      url: documents
+      # submenu:
+      #   - title: Employee Profiles
+      #     url: employee-profiles
+      #   - title: Jobs
+      #     url: jobs
+      #   - title: Documents
+      #     url: documents
+      #   - title: Policies
+      #     url: policies
+
+
+
+    switchViews:
+
+      detail:
+        layout: tab  # or "single", "accordion"
+        detailType: document # or document or record
+        imageField: ['photo']
+        icon: fas fa-user-profile
+        titleFields: ['first_name', 'last_name'] # eg John Joe
+        subtitleFields: ['email', 'phone'] # email@domain.com
+        contentFields: ['gender', 'date_of_birth'] # *Male * May 30, 1985
+
+
+
+
+
+    iconClasses: fas fa-file-alt
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ['show', 'edit', 'delete']
+    # moreActions:
+    #   - title: Download Document
+    #     icon: fas fa-download
+    #     route: download.document
+    #   - title: Preview Document
+    #     icon: fas fa-eye
+    #     route: preview.document
+
+
+
+
+wizards:
+  employee_onboarding:
+    module: hr
+    context: people
+    title: New Hire Onboarding
+    description: Set up core employee and job details to get started
+
+    # Option 1: Simple linkage (same field everywhere)
+    # linkField: employee_number
+
+    # Option 2: Complex linkage (user field vs database field)
+    linkFields:
+      userField: employee_number      # What user sees/enters
+      databaseField: employee_id      # What's stored in related tables
+
+    models:
+      primary: App\Modules\Hr\Models\Employee
+      related:
+        - App\Modules\Hr\Models\EmployeePosition
+
+
+    steps:
+      - title: Personal & Employment
+        model: App\Modules\Hr\Models\Employee
+        groups: [personal_information, employment_details]
+        isLinkSource: true
+
+      - title: Job Setup
+        model: App\Modules\Hr\Models\EmployeePosition
+        groups: [job_information, employment_details, compensation]  # Only essential groups
+        requiresLink: true
+
+
+      - title: Review & Confirm
+        description: Please review all information before finalizing
+        model: null
+
+
+    completion:
+        title: "New Hire Added Successfully!"
+        message: "The employee record is now active. You can view details or  add another hire."
+        # message: "The employee record is now active. You can view details, add another hire, or upload required documents."
+        actions:
+          - label: "View Employee"
+            url: "/hr/employees/{id}"
+            primary: true
+
+          - label: "Add Another Employee"
+            url: "/hr/employee-onboarding"
+
+          - label: "Employee Directory"
+            url: "/hr/employees"
+
+          #- label: "Upload Documents"
+          #  url: "/hr/documents/create?employee_id={id}"
+
+
+
+
+
+
+dashboards:
+  hr_people_overview:
+    module: hr
+    context: people
+    title: "People Management Overview"
+    description: "Employee statistics, hiring trends, and team analytics"
+
+    # Role-based access (optional)
+    roles:
+      admin: full
+      manager: limited
+      user: basic
+
+    widgets:
+      ######### CountUp/Down widgets ######
+      total_employees:
+        type: icon-card # or count-up, count-down
+        title: "Total Employees"
+        model: Employee
+        calculation_method: count
+        icon: fas fa-users
+        size: col-sm-4
+
+      active_employees:
+        type: icon-card # or count-up, count-down
+        title: "Active Employees"
+        model: Employee
+        calculation_method: count
+        filters:
+          - ["status", "=", "Active"]
+        icon: fas fa-user-check
+        size: col-sm-4
+        color: success
+
+      new_hires_this_month:
+        type: icon-card # or count-up, count-down
+        title: "New Hires This Month"
+        model: Employee
+        calculation_method: count
+        filters:
+          - ["hire_date", ">=", "startOfMonth()"]
+        icon: fas fa-user-plus
+        size: col-sm-4
+        color: info
+
+      ###### Progress bars ######
+      # profile_completion:
+      #   type: progress-bar
+      #   title: "Profile Completion Rate"
+      #   model: EmployeeProfile
+      #   calculation_method: completion_rate
+      #   total_items: "Employee::count()"
+      #   element_label: "Profile Completion"
+      #   size: col-sm-6
+      #   progress_colors:
+      #     50: danger
+      #     75: warning
+      #     90: success
+
+      ####### Charts ##########
+      employees_by_department:
+        type: chart
+        title: "Employees by Department"
+        model: Employee
+        chart_type: bar
+        group_by_table: departments
+        group_by_table_column: name
+        pivot:
+          table: employees
+          model_column: department_id
+        size: col-6
+        controls: [chart_type]
+
+      hiring_trends:
+        type: chart
+        title: "Hiring Trends"
+        model: Employee
+        chart_type: line
+        group_by: monthly
+        column: hire_date
+        size: col-6
+        controls: [chart_type, time_duration]
+
+      #### Static widgets ####
+      #upcoming_reviews:
+      #  type: count-down
+      #  title: "Next Performance Review"
+      #  duration: "+30 days"
+      #  format: readable
+      #  size: col-sm-3
+
+

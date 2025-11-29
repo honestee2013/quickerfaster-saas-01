@@ -1,0 +1,764 @@
+models:
+  User:
+    module: admin
+    addMigration: false
+    context: Users & Permissions
+    pageTitle: Users
+    fields:
+      name:
+        fillable: true
+        type: string
+        label: Full Name
+        validation:
+          - required|string|max:255
+        wizard:
+          user_onboarding: true
+
+      email:
+        fillable: true
+        type: string
+        label: Email Address
+        validation:
+          - required|email|max:255|unique:users,email
+        wizard:
+          user_onboarding: true
+
+      email_verified_at:
+        fillable: true
+        type: datetime
+        label: Email Verified At
+        modifiers:
+          nullable: true
+        # Usually set automatically; not shown in forms by default
+
+      password:
+        fillable: true
+        type: password
+        label: Password
+        validation:
+          - required|string|min:8|confirmed
+        wizard:
+          user_onboarding: true
+
+      password_confirmation:
+        fillable: false  # Not stored in DB
+        type: password
+        label: Confirm Password
+        validation:
+          - required_with:password|same:password
+
+      remember_token:
+        fillable: false
+        type: string
+        length: 100
+        modifiers:
+          nullable: true
+        # Managed by Laravel auth; not user-editable
+
+      user_type:
+        fillable: true
+        type: select
+        label: User Type
+        options:
+          admin: Administrator
+          hr_manager: HR Manager
+          employee: Employee
+          viewer: Viewer
+        validation:
+          - required|string
+        wizard:
+          user_onboarding: true
+
+      # Optional: Add status field if used in your app (common in SaaS)
+      status:
+        fillable: true
+        type: select
+        label: Status
+        options:
+          active: Active
+          inactive: Inactive
+          invited: Invited
+        default: invited
+        validation:
+          - required
+        modifiers:
+          nullable: false
+
+    hiddenFields:
+      onTable: [password, remember_token, email_verified_at]
+      onNewForm: [email_verified_at, remember_token, status]
+      onEditForm: [password, password_confirmation, remember_token, email_verified_at]
+      onQuery: []
+
+    fieldGroups:
+      identity:
+        title: Identity
+        groupType: admin
+        fields:
+          - name
+          - email
+          - user_type
+      authentication:
+        title: Authentication
+        groupType: admin
+        fields:
+          - password
+          - password_confirmation
+      system:
+        title: System Info
+        groupType: admin
+        fields:
+          - status
+        # Hidden from most users; visible to admins
+
+    relations:
+      roles:
+        type: belongsToMany
+        model: App\Modules\Admin\Models\Role
+        pivotTable: user_has_roles
+        foreignPivotKey: user_id
+        relatedPivotKey: role_id
+        displayField: name
+        addToDetail: true
+        url: 'auth/roles'
+        index: 'admin/users'
+
+      permissions:
+        type: belongsToMany
+        model: App\Modules\Admin\Models\Permission
+        through: roles
+        displayField: name
+
+      employee:
+        type: hasOne
+        model: App\Modules\Hr\Models\Employee
+        foreignKey: user_id
+        displayField: employee_number
+        hintField: first_name
+
+    sidebar:
+      add: true
+      context: Users & Permissions
+      title: Users
+      iconClasses: fas fa-user-cog
+      url: users
+
+    topNav:
+      add: true
+      context: Users & Permissions
+      title: Users
+      iconClasses: fas fa-user-cog
+      url: users
+
+    # switchViews:
+    #   default: list
+    #   list:
+    #     titleFields: [name]
+    #     subtitleFields: [email, user_type]
+    #     contentFields: [status]
+    #   detail:
+    #     layout: tab
+    #     detailType: profile
+    #     icon: fas fa-user
+    #     titleFields: [name]
+    #     subtitleFields: [email]
+    #     contentFields: [user_type, status]
+    #     headerLink:
+    #       - label: Assigned Roles
+    #         url: '/auth/roles?user_id={id}'
+    #         returnTo: '/admin/users'
+
+    iconClasses: fas fa-user
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    simpleActions: ['show', 'edit', 'delete']
+
+    controls:
+      addButton:
+        - label: "Invite User"
+          type: quick_add
+          icon: fas fa-user-plus
+          primary: true
+        - label: "Bulk Invite"
+          type: bulk_invite
+          icon: fas fa-envelope
+
+      files:
+        export: [csv, xls]
+        print: false
+
+      # bulkActions:
+      #   delete: true
+      #   export: [csv]
+
+      perPage: [10, 25, 50, 100]
+      search: true
+      showHideColumns: true
+
+
+
+  Role:
+    module: admin
+    addMigration: false
+    context: Users & Permissions
+    pageTitle: Roles
+    fields:
+      name:
+        fillable: true
+        type: string
+        label: Role Name
+        validation:
+          - required|string|max:255
+        wizard:
+          role_setup: true
+
+      description:
+        fillable: true
+        type: textarea
+        label: Description
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|max:1000
+
+      editable:
+        fillable: true
+        type: select
+        label: Editable
+        options:
+          Yes: Yes
+          No: No
+        default: 'No'
+        validation:
+          - required|in:Yes,No
+
+      guard_name:
+        fillable: true
+        type: select
+        label: Guard
+        options:
+          web: Web
+          api: API
+        default: web
+        validation:
+          - required|string|in:web,api
+
+    hiddenFields:
+      onTable: []
+      onNewForm: []
+      onEditForm: []
+      onQuery: []
+
+    fieldGroups:
+      basic_info:
+        title: Role Details
+        groupType: auth
+        fields:
+          - name
+          - description
+      access_control:
+        title: Admin Settings
+        groupType: auth
+        fields:
+          - editable
+          - guard_name
+
+    relations:
+      permissions:
+        type: belongsToMany
+        model: App\Models\Permission
+        pivotTable: role_has_permissions
+        foreignPivotKey: role_id
+        relatedPivotKey: permission_id
+        displayField: name
+        addToDetail: true
+        url: 'auth/permissions'
+        index: 'auth/roles'
+
+      users:
+        type: belongsToMany
+        model: App\Models\User
+        pivotTable: user_has_roles
+        foreignPivotKey: role_id
+        relatedPivotKey: user_id
+        displayField: name
+        hintField: email
+        addToDetail: true
+        url: 'users'
+        index: 'auth/roles'
+
+    sidebar:
+      add: true
+      context: Users & Permissions
+      title: Roles
+      iconClasses: fas fa-user-shield
+      url: roles
+
+    topNav:
+      add: false
+      context: Users & Permissions
+      title: Roles
+      iconClasses: fas fa-user-shield
+      url: roles
+
+    # switchViews:
+    #   default: list
+    #   list:
+    #     titleFields: [name]
+    #     subtitleFields: [guard_name]
+    #     contentFields: [description]
+    #   detail:
+    #     layout: tab
+    #     detailType: record
+    #     icon: fas fa-user-shield
+    #     titleFields: [name]
+    #     subtitleFields: [guard_name]
+    #     contentFields: [description]
+    #     headerLink:
+    #       - label: Assigned Users
+    #         url: '/users?role_id={id}'
+    #         returnTo: '/auth/roles'
+    #       - label: Permissions
+    #         url: '/auth/permissions?role_id={id}'
+    #         returnTo: '/auth/roles'
+
+    iconClasses: fas fa-user-shield
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    simpleActions: ['show', 'edit', 'delete']
+
+    controls:
+      addButton:
+        - label: "Add Role"
+          type: quick_add
+          icon: fas fa-plus
+          primary: true
+        - label: "Create Role with Permissions"
+          type: wizard
+          wizard: role_permission_setup
+          icon: fas fa-shield-alt
+
+      files:
+        export: [csv, json]
+        print: false
+
+      # bulkActions:
+      #   delete: true
+
+      perPage: [10, 25, 50, 100]
+      search: true
+      showHideColumns: true
+
+
+
+  Permission:
+    module: admin
+    addMigration: false
+    context: Users & Permissions
+    pageTitle: Permissions
+    fields:
+      name:
+        fillable: true
+        type: string
+        label: Name
+        validation:
+          - required|string|max:255
+        wizard:
+          permission_setup: true
+
+      description:
+        fillable: true
+        type: textarea
+        label: Description
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|max:1000
+
+      guard_name:
+        fillable: true
+        type: select
+        label: Guard
+        options:
+          web: Web
+          api: API
+        default: web
+        validation:
+          - required|string|in:web,api
+
+    hiddenFields:
+      onTable: []
+      onNewForm: []
+      onEditForm: []
+      onQuery: []
+
+    fieldGroups:
+      basic_info:
+        title: Permission Details
+        groupType: auth
+        fields:
+          - name
+          - description
+          - guard_name
+
+    relations:
+      roles:
+        type: belongsToMany
+        model: App\Models\Role
+        pivotTable: role_has_permissions
+        foreignPivotKey: permission_id
+        relatedPivotKey: role_id
+        displayField: name
+
+    sidebar:
+      add: true
+      context: Users & Permissions
+      title: Permissions
+      iconClasses: fas fa-user-lock
+      url: access-control-management
+
+    topNav:
+      add: false
+      context: Users & Permissions
+      title: Permissions
+      iconClasses: fas fa-user-lock
+      url: access-control-management
+
+    # switchViews:
+    #   default: list
+    #   list:
+    #     titleFields: [name]
+    #     subtitleFields: [guard_name]
+    #     contentFields: [description]
+    #   detail:
+    #     layout: single
+    #     detailType: record
+    #     icon: fas fa-lock
+    #     titleFields: [name]
+    #     subtitleFields: [guard_name]
+    #     contentFields: [description]
+
+    iconClasses: fas fa-lock
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    simpleActions: ['show', 'edit', 'delete']
+
+    controls:
+      addButton:
+        - label: "Add Permission"
+          type: quick_add
+          icon: fas fa-plus
+          primary: true
+
+      files:
+        export: [csv, json]
+        print: false
+
+      # bulkActions:
+      #   delete: true
+
+      perPage: [10, 25, 50, 100]
+      search: true
+      showHideColumns: true
+
+
+
+
+
+
+
+  #Team:
+  #  module: admin
+  #  context: organization
+  #  pageTitle: Teams
+  #  fields:
+  #    id:
+  #      fillable: false
+  #      type: bigIncrements
+  #      hidden: true
+
+  #    name:
+  #      fillable: true
+  #      type: string
+  #      label: Team Name
+  #      validation:
+  #        - required|string|max:255|unique:teams,name
+  #      wizard:
+  #        team_setup: true
+
+  #    owner_id:
+  #      fillable: true
+  #      type: select
+  #      label: Owner
+  #      foreign:
+  #        table: users
+  #        column: id
+  #        onDelete: cascade
+  #      validation:
+  #        - required|exists:users,id
+  #      wizard:
+  #        team_setup: true
+
+  #    personal_team:
+  #      fillable: true
+  #      type: boolradio
+  #      label: Personal Team
+  #      options:
+  #        true: Yes
+  #        false: No
+  #      default: false
+  #      modifiers:
+  #        nullable: false
+  #      validation:
+  #        - boolean
+
+  #    description:
+  #      fillable: true
+  #      type: textarea
+  #      label: Description
+  #      modifiers:
+  #        nullable: true
+  #      validation:
+  #        - nullable|string|max:1000
+
+  #    status:
+  #      fillable: true
+  #      type: select
+  #      label: Status
+  #      options:
+  #        active: Active
+  #        archived: Archived
+  #      default: active
+  #      validation:
+  #        - required
+
+  #  hiddenFields:
+  #    onTable: [personal_team]
+  #    onNewForm: []
+  #    onEditForm: [owner_id]  # Typically not editable after creation
+  #    onQuery: []
+
+  #  fieldGroups:
+  #    basic_info:
+  #      title: Team Information
+  #      groupType: admin
+  #      fields:
+  #        - name
+  #        - description
+  #        - status
+  #    ownership:
+  #      title: Ownership
+  #      groupType: admin
+  #      fields:
+  #        - owner_id
+  #        - personal_team
+
+  #  relations:
+  #    owner:
+  #      type: belongsTo
+  #      model: App\Modules\Admin\Models\User
+  #      foreignKey: owner_id
+  #      displayField: name
+  #      hintField: email
+
+  #    users:
+  #      type: belongsToMany
+  #      model: App\Modules\Admin\Models\User
+  #      pivotTable: team_user
+  #      foreignPivotKey: team_id
+  #      relatedPivotKey: user_id
+  #      displayField: name
+  #      hintField: email
+  #      addToDetail: true
+  #      url: 'admin/users'
+  #      index: 'admin/teams'
+
+  #    roles:
+  #      type: hasMany
+  #      model: App\Models\Role
+  #      foreignKey: team_id
+  #      displayField: name
+  #      addToDetail: true
+  #      url: 'auth/roles'
+  #      index: 'admin/teams'
+
+  #  sidebar:
+  #    add: true
+  #    context: organization
+  #    title: Teams
+  #    iconClasses: fas fa-users-cog
+  #    url: teams
+
+  #  topNav:
+  #    add: true
+  #    context: organization
+  #    title: Teams
+  #    iconClasses: fas fa-users-cog
+  #    url: teams
+
+  #  switchViews:
+  #    default: list
+  #    list:
+  #      titleFields: [name]
+  #      subtitleFields: [owner.name]
+  #      contentFields: [status]
+  #    detail:
+  #      layout: tab
+  #      detailType: record
+  #      icon: fas fa-users-cog
+  #      titleFields: [name]
+  #      subtitleFields: [owner.email]
+  #      contentFields: [description, status]
+  #      headerLink:
+  #        - label: Members
+  #          url: '/admin/users?team_id={id}'
+  #          returnTo: '/admin/teams'
+  #        - label: Team Roles
+  #          url: '/auth/roles?team_id={id}'
+  #          returnTo: '/admin/teams'
+
+  #  iconClasses: fas fa-users-cog
+  #  includeHeader: false
+  #  includeFooter: false
+  #  includeSidebar: true
+  #  simpleActions: ['show', 'edit', 'delete']
+
+  #  controls:
+  #    addButton:
+  #      - label: "Create Team"
+  #        type: quick_add
+  #        icon: fas fa-plus
+  #        primary: true
+  #      - label: "Setup Team with Members"
+  #        type: wizard
+  #        wizard: team_setup
+  #        icon: fas fa-user-friends
+
+  #    files:
+  #      export: [csv, json]
+  #      print: false
+
+  #    bulkActions:
+  #      delete: true
+
+  #    perPage: [10, 25, 50]
+  #    search: true
+  #    showHideColumns: true
+
+
+
+
+
+
+
+dashboards:
+  access_security_overview:
+    module: admin
+    context: Users & Permissions
+    title: "Admin & Security Overview"
+    description: "User activity, role distribution, and system security status"
+
+    roles:
+      admin: full
+      manager: limited  # e.g., can't see audit logs
+      user: none        # typically hidden for non-admins
+
+    widgets:
+
+      ######### Count Widgets ##########
+      total_users:
+        type: icon-card
+        title: "Total Users"
+        model: User
+        calculation_method: count
+        icon: fas fa-users
+        size: col-sm-3
+
+      active_users:
+        type: icon-card
+        title: "Active Users"
+        model: User
+        calculation_method: count
+        filters:
+          - ["status", "=", "active"]
+        icon: fas fa-user-check
+        size: col-sm-3
+        color: success
+
+      total_roles:
+        type: icon-card
+        title: "Custom Roles"
+        model: Role
+        calculation_method: count
+        filters:
+          - ["editable", "=", "Yes"]
+        icon: fas fa-user-shield
+        size: col-sm-3
+
+      unverified_users:
+        type: icon-card
+        title: "Pending Verification"
+        model: User
+        calculation_method: count
+        filters:
+          - ["email_verified_at", "=", null]
+          - ["status", "!=", "inactive"]
+        icon: fas fa-envelope
+        size: col-sm-3
+        color: warning
+
+      ######### Charts ##########
+      roles_distribution:
+        type: chart
+        title: "Users by Role"
+        model: User
+        chart_type: pie
+        group_by_relation: roles
+        relation_field: name
+        size: col-6
+        controls: [chart_type]
+
+      user_activity_last_30_days:
+        type: chart
+        title: "User Logins (Last 30 Days)"
+        model: User
+        chart_type: line
+        column: last_login_at  # assuming you track this
+        group_by: daily
+        size: col-6
+        controls: [time_duration]
+
+      ######### Security Alerts ##########
+      security_alerts:
+        type: alert-list
+        title: "Security Alerts"
+        size: col-12
+        alerts:
+          - condition: "User::where('status', 'invited')->where('created_at', '<', now()->subDays(7))->count() > 0"
+            message: "There are unclaimed invitations older than 7 days."
+            action_url: "/admin/users?status=invited"
+            severity: warning
+
+          - condition: "Role::where('editable', 'No')->doesntHave('users')->count() > 0"
+            message: "Unused system roles detected."
+            action_url: "/auth/roles"
+            severity: info
+
+          - condition: "User::whereNull('email_verified_at')->count() > 10"
+            message: "Over 10 unverified users."
+            action_url: "/admin/users?verified=false"
+            severity: warning
+
+      ######### Recent Activity ##########
+      recent_user_changes:
+        type: activity-feed
+        title: "Recent Admin Changes"
+        size: col-12
+        model: Spatie\Activitylog\Models\Activity
+        filters:
+          - ["log_name", "=", "admin"]
+        limit: 5
+        fields: [causer.name, description, created_at]

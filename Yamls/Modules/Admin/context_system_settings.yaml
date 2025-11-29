@@ -1,0 +1,167 @@
+models:
+  Location:
+    module: admin
+    context: System Settings
+    fields:
+      name:
+        fillable: true
+        type: string
+        validation:
+          - required|string|max:255
+        label: Location Name
+      code:
+        fillable: true
+        autoGenerate: true
+        type: string
+        label: Location Code
+        validation:
+          - required|string|max:50|unique:locations,code
+      address_line_1:
+        fillable: true
+        type: string
+        validation:
+          - required|string|max:255
+        label: Address Line 1
+      address_line_2:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|max:255
+        label: Address Line 2
+      address_line_3:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|max:255
+        label: Address Line 3
+      address_city:
+        fillable: true
+        type: string
+        validation:
+          - required|string|max:255
+        label: City / Locality
+      address_state_province:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|max:255
+        label: State / Province / Region
+      address_postal_code:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|max:20
+        label: Postal Code
+      address_country_code:
+        fillable: true
+        type: select
+        optionsFrom: countries
+        validation:
+          - required|string|size:2
+        label: Country
+      timezone:
+        fillable: true
+        type: select
+        optionsFrom: timezones
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|max:64
+        label: Timezone
+        help: "Local timezone (e.g., Africa/Lagos, America/New_York)"
+      is_primary:
+        fillable: true
+        type: checkbox
+        modifiers:
+          default: false
+        validation:
+          - boolean
+        label: Primary Location
+        help: "Company's main operational address"
+      phone:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      email:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+      is_active:
+        fillable: true
+        type: boolcheckbox
+        modifiers:
+          default: true
+          nullable: true
+        validation:
+          - nullable|boolean
+
+    fieldGroups:
+      - title: Location Information
+        groupType: organization
+        fields:
+          - name
+          - code
+          - phone
+          - email
+          - is_primary
+      - title: Address
+        groupType: organization
+        fields:
+          - address_line_1
+          - address_line_2
+          - address_line_3
+          - address_city
+          - address_state_province
+          - address_postal_code
+          - address_country_code
+          - timezone
+      - title: Status
+        groupType: organization
+        fields:
+          - is_active
+
+
+
+    relations:
+      # manager:
+      #   type: belongsTo
+      #   model: App\Modules\Hr\Models\Employee
+      #   foreignKey: manager_id
+      #   displayField: employee_number
+    company:
+        type: belongsTo
+        model: App\Modules\System\Models\Company
+        foreignKey: company_id
+        displayField: name
+    sidebar:
+      add: true
+      context: settings
+      groupTitle: Organization
+      title: Locations
+      iconClasses: fas fa-map-marker-alt
+      url: locations
+
+    topNav:
+      add: true
+      context: System Settings
+      title: System Settings
+      iconClasses: fas fa-cogs
+      url: locations
+
+    iconClasses: fas fa-location-arrow
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ['show', 'edit', 'delete']
+

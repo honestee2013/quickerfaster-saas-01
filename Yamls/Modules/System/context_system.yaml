@@ -1,0 +1,828 @@
+models:
+
+  Plan:
+    module: system
+    context: system
+    fields:
+      name:
+        fillable: true
+        type: string
+        validation:
+          - required|string|max:100
+        label: Plan Name
+        help: "e.g., Starter, Professional, Enterprise"
+      slug:
+        fillable: true
+        type: string
+        validation:
+          - required|string|alpha_dash|max:50|unique:plans,slug
+        label: Plan Slug
+        help: "Used in code (e.g., 'professional')"
+      description:
+        fillable: true
+        type: textarea
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string
+        label: Description
+
+      # === Pricing ===
+      currency_code:
+        fillable: true
+        type: select
+        optionsFrom: currencies
+        validation:
+          - required|string|size:3
+        label: Currency
+        help: "Primary billing currency (ISO 4217)"
+      price_monthly:
+        fillable: true
+        type: decimal
+        precision: 10
+        scale: 2
+        modifiers:
+          default: 0.00
+        validation:
+          - required|numeric|min:0|max:999999.99
+        label: Monthly Price
+        help: "Billed monthly (e.g., $29.00)"
+      price_annual:
+        fillable: true
+        type: decimal
+        precision: 10
+        scale: 2
+        modifiers:
+          default: 0.00
+        validation:
+          - required|numeric|min:0|max:999999.99
+        label: Annual Price
+        help: "Billed yearly (total amount, e.g., $290.00)"
+      billing_cycle:
+        fillable: true
+        type: select
+        options: Monthly, Annual, Both
+        validation:
+          - required|string|in:Monthly,Annual,Both
+        label: Billing Cycle Options
+      trial_days:
+        fillable: true
+        type: integer
+        modifiers:
+          default: 0
+        validation:
+          - required|integer|min:0|max:365
+        label: Free Trial (Days)
+
+      # === Status & Display ===
+      is_active:
+        fillable: true
+        type: boolean
+        modifiers:
+          default: true
+        validation:
+          - required|boolean
+        label: Active
+        help: "Inactive plans won't be shown to new customers"
+      sort_order:
+        fillable: true
+        type: integer
+        modifiers:
+          default: 0
+        validation:
+          - required|integer
+        label: Sort Order
+        help: "Lower numbers appear first"
+
+      # === Feature Entitlements (Module-Agnostic) ===
+      feature_limits:
+        fillable: true
+        type: json
+        modifiers:
+          nullable: true
+        label: Feature Configuration
+        help: "Example: {\"hr\": {\"max_employees\": 50, \"max_locations\": 5}, \"accounting\": {\"max_invoices\": 1000}}"
+
+
+
+    hiddenFields:
+      onTable: [description, slug, sort_order]
+      onNewForm: []
+      onEditForm: [slug]
+      onQuery: [slug, sort_order]
+
+    fieldGroups:
+      - title: Plan Basics
+        groupType: billing
+        fields:
+          - name
+          - slug
+          - description
+          - is_active
+          - sort_order
+      - title: Pricing
+        groupType: billing
+        fields:
+          - currency_code
+          - price_monthly
+          - price_annual
+          - billing_cycle
+          - trial_days
+      - title: Features & Limits
+        groupType: features
+        fields:
+          - feature_limits
+
+    relations:
+      companies:
+        type: hasMany
+        model: App\Modules\System\Models\Company
+        foreignKey: plan_id
+
+    sidebar:
+      add: true
+      context: system
+      groupTitle: System
+      title: Subscription Plans
+      iconClasses: fas fa-receipt
+      url: plans
+      permission: manage-system
+
+    iconClasses: fas fa-layer-group
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ['show', 'edit', 'delete']
+
+
+  Company:
+    module: system
+    context: system
+    fields:
+      # === Core Tenant Identity ===
+      name:
+        fillable: true
+        type: string
+        validation:
+          - required|string|max:255
+        label: Company Name
+        # wizard:
+        #   company_onboarding: true
+
+      subdomain:
+        fillable: true
+        type: string
+        validation:
+          - required|string|alpha_dash|min:3|max:63|unique:companies,subdomain
+          - regex:/^[a-z][a-z0-9-]{1,61}[a-z0-9]$/
+        label: Subdomain
+        help: "Your workspace will be: https://<subdomain>.my-domain.com"
+      domain_verified:
+        fillable: true
+        type: boolean
+        modifiers:
+          default: false
+          nullable: true
+        validation:
+          - required|boolean
+        label: Domain Verified
+        help: "Set to true after email or DNS verification to prevent abuse"
+
+      email_verification_token:
+        fillable: true
+        type: text
+        validation:
+          - nullable|string
+        modifiers:
+          nullable: true
+
+      email_verification_sent_at:
+        fillable: true
+        type: datetime
+        validation:
+          - required|datetime
+        modifiers:
+          nullable: true
+
+      # === Database & Provisioning ===
+      database_name:
+        fillable: false
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|max:64
+        label: Database Name
+        help: "Auto-generated on workspace activation"
+
+      employee_count:
+        fillable: false
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - required|string|max:64
+
+      industry:
+        fillable: true
+        type: select
+        options: Technology, Healthcare, Retail, Manufacturing, Professional_Services, Education, Agricultural, Other
+        modifiers:
+          default: pending
+          nullable: true
+        validation:
+          - required|string|in:Pending,Active,Suspended,Canceled
+
+
+      # === Status & Plan ===
+      status:
+        fillable: true
+        type: select
+        options: Pending, Active, Suspended, Canceled
+        modifiers:
+          default: pending
+          nullable: true
+        validation:
+          - required|string|in:Pending,Active,Suspended,Canceled
+        label: Status
+      plan_id:
+        fillable: true
+        type: select
+        foreign:
+          table: plans
+          column: id
+          onDelete: set null
+        modifiers:
+          nullable: true
+        label: Subscription Plan
+
+      # === Billing & Contact ===
+      billing_email:
+        fillable: true
+        type: string
+        validation:
+          - required|email|max:255
+        label: Billing Email
+        # wizard:
+        #   company_onboarding: true
+
+      billing_address_line_1:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - required|string|max:255
+        label: Billing Address Line 1
+        # wizard:
+        #   company_onboarding: true
+
+      billing_address_line_2:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|max:255
+        label: Billing Address Line 2
+      billing_city:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - required|string|max:255
+        label: City
+        # wizard:
+        #   company_onboarding: true
+
+      billing_state_province:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|max:255
+        label: State / Province
+      billing_postal_code:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - required|string|max:20
+        label: Postal Code
+        # wizard:
+        #   company_onboarding: true
+
+      billing_country_code:
+        fillable: true
+        type: select
+        optionsFrom: countries
+        modifiers:
+          nullable: true
+        validation:
+          - required|string|size:2
+        label: Country
+
+      # === Compliance & Metadata ===
+      timezone:
+        fillable: true
+        type: select
+        optionsFrom: timezones
+        modifiers:
+          nullable: true
+        validation:
+          - required|string|max:64
+        label: Primary Timezone
+        help: "Used for payroll, attendance, and reports"
+        # wizard:
+        #   company_onboarding: true
+
+      currency_code:
+        fillable: true
+        type: select
+        optionsFrom: currencies
+        modifiers:
+          nullable: true
+        validation:
+          - required|string|size:3
+        label: Currency
+        help: "ISO 4217 code (e.g., USD, EUR)"
+
+
+    hiddenFields:
+      onTable: [database_name, billing_address_line_2]
+      onNewForm: [database_name, status]
+      onEditForm: [subdomain, database_name]
+      onQuery: [database_name]
+
+    fieldGroups:
+      - title: Company Identity
+        groupType: tenant
+        fields:
+          - name
+          - subdomain
+          - domain_verified
+          - timezone
+          - currency_code
+      - title: Subscription & Status
+        groupType: billing
+        fields:
+          - status
+          - plan_id
+          - billing_email
+      - title: Billing Address
+        groupType: billing
+        fields:
+          - billing_address_line_1
+          - billing_address_line_2
+          - billing_city
+          - billing_state_province
+          - billing_postal_code
+          - billing_country_code
+
+    relations:
+      plan:
+        type: belongsTo
+        model: App\Modules\System\Models\Plan
+        foreignKey: plan_id
+        displayField: name
+      users:
+        type: hasMany
+        model: App\Modules\Access\Models\User
+        foreignKey: company_id
+      #modules:
+      #  type: belongsToMany
+      #  model: App\Modules\System\Models\Module
+      #  table: company_modules
+      #  foreignPivotKey: company_id
+      #  relatedPivotKey: module_id
+      #  #pivotFields
+
+    sidebar:
+      add: true
+      context: system
+      groupTitle: System
+      title: Companies (Tenants)
+      iconClasses: fas fa-building
+      url: companies
+      permission: manage-system
+
+    iconClasses: fas fa-building
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ['show', 'edit', 'delete']
+
+
+
+  Module:
+    module: system
+    context: system
+    fields:
+      # === Core Identity ===
+      name:
+        fillable: true
+        type: string
+        validation:
+          - required|string|max:100|unique:modules,name
+        label: Module Name
+        help: "Human-readable name (e.g., Human Resources)"
+      slug:
+        fillable: true
+        type: string
+        validation:
+          - required|string|alpha_dash|max:50|unique:modules,slug
+          - regex:/^[a-z][a-z0-9_]*$/
+        label: Module Slug
+        help: "Code identifier (e.g., 'hr', 'accounting') — used in policies and routes"
+      description:
+        fillable: true
+        type: textarea
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string
+        label: Description
+        help: "Brief overview of module capabilities"
+
+      # === Status & Visibility ===
+      is_active:
+        fillable: true
+        type: boolean
+        modifiers:
+          default: true
+        validation:
+          - required|boolean
+        label: Active
+        help: "Inactive modules won't be available for new subscriptions"
+      sort_order:
+        fillable: true
+        type: integer
+        modifiers:
+          default: 0
+        validation:
+          - required|integer
+        label: Sort Order
+        help: "Order in module selection UI (lower = higher priority)"
+
+      # === Technical Metadata ===
+      migration_path:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|max:255
+        label: Tenant Migration Path
+        help: "Relative path from /database/tenant_migrations/ (e.g., 'hr')"
+      service_provider:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|max:255
+        label: Service Provider Class
+        help: "Fully qualified class (e.g., App\\Modules\\Hr\\HrServiceProvider)"
+
+
+
+    hiddenFields:
+      onTable: [description, migration_path, service_provider]
+      onNewForm: []
+      onEditForm: [slug]
+      onQuery: [migration_path, service_provider]
+
+    fieldGroups:
+      - title: Module Basics
+        groupType: system
+        fields:
+          - name
+          - slug
+          - description
+          - is_active
+          - sort_order
+      - title: Technical Configuration
+        groupType: system
+        fields:
+          - migration_path
+          - service_provider
+
+    relations:
+      companies:
+        type: belongsToMany
+        model: App\Modules\System\Models\Company
+        table: company_modules
+        foreignPivotKey: module_id
+        relatedPivotKey: company_id
+        displayField: name
+
+    sidebar:
+      add: true
+      context: system
+      groupTitle: System
+      title: Modules
+      iconClasses: fas fa-puzzle-piece
+      url: modules
+      permission: manage-system
+
+    iconClasses: fas fa-cube
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ['show', 'edit', 'delete']
+
+
+
+
+  Subscription:
+    module: system
+    context: system
+    fields:
+      # === Relationships ===
+      company_id:
+        fillable: true
+        type: select
+        foreign:
+          table: companies
+          column: id
+          onDelete: cascade
+        validation:
+          - required|exists:companies,id
+        label: Company
+
+      plan_id:
+        fillable: true
+        type: select
+        foreign:
+          table: plans
+          column: id
+          onDelete: restrict
+        validation:
+          - required|exists:plans,id
+        label: Plan
+
+      # === Billing & Status ===
+      status:
+        fillable: true
+        type: select
+        options: Pending, Active, In_Trial, Past_Due, Canceled, Expired
+        modifiers:
+          default: pending
+        validation:
+          - required|string|in:pending,active,trialing,past_due,canceled,expired
+        label: Status
+
+      billing_cycle:
+        fillable: true
+        type: select
+        options: Monthly, Annual
+        validation:
+          - required|string|in:Monthly,Annual
+        label: Billing Cycle
+
+      currency_code:
+        fillable: true
+        type: select
+        optionsFrom: currencies
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|size:3
+        label: Billing Currency
+        help: "Overrides company currency if needed"
+
+      # === Dates ===
+      starts_at:
+        fillable: true
+        type: date
+        validation:
+          - required|date
+        label: Subscription Starts
+      ends_at:
+        fillable: true
+        type: date
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|date|after_or_equal:starts_at
+        label: Subscription Ends
+        help: "End of full term (e.g., 1 year from start)"
+      trial_ends_at:
+        fillable: true
+        type: date
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|date|after_or_equal:starts_at
+        label: Trial Ends
+        help: "Null if no trial"
+      canceled_at:
+        fillable: true
+        type: datetime
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|date
+        label: Canceled At
+      current_period_start:
+        fillable: true
+        type: date
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|date
+        label: Current Period Start
+        help: "Start of current billing cycle"
+      current_period_end:
+        fillable: true
+        type: date
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|date|after_or_equal:current_period_start
+        label: Current Period End
+        help: "End of current billing cycle (e.g., monthly)"
+
+      # === Payment Provider Abstraction ===
+      payment_provider:
+        fillable: true
+        type: select
+        options: Stripe, PayPal, Manual
+
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|in:stripe,paypal,manual
+        label: Payment Provider
+      provider_subscription_id:
+        fillable: true
+        type: string
+        modifiers:
+          nullable: true
+        validation:
+          - nullable|string|max:255
+        label: Provider Subscription ID
+        help: "ID from payment provider (e.g., Stripe subscription ID)"
+
+
+
+    hiddenFields:
+      onTable: [provider_subscription_id, canceled_at, current_period_start, current_period_end]
+      onNewForm: [status, trial_ends_at, ends_at, current_period_start, current_period_end, canceled_at, provider_subscription_id]
+      onEditForm: [company_id, provider_subscription_id, canceled_at]
+      onQuery: [provider_subscription_id, canceled_at]
+
+    fieldGroups:
+      - title: Subscription Details
+        groupType: billing
+        fields:
+          - company_id
+          - plan_id
+          - billing_cycle
+          - status
+          - currency_code
+      - title: Dates & Periods
+        groupType: billing
+        fields:
+          - starts_at
+          - ends_at
+          - trial_ends_at
+          - current_period_start
+          - current_period_end
+      - title: Payment & External
+        groupType: system
+        fields:
+          - payment_provider
+          - provider_subscription_id
+          - canceled_at
+
+    relations:
+      company:
+        type: belongsTo
+        model: App\Modules\System\Models\Company
+        foreignKey: company_id
+        displayField: name
+      plan:
+        type: belongsTo
+        model: App\Modules\System\Models\Plan
+        foreignKey: plan_id
+        displayField: name
+
+    sidebar:
+      add: true
+      context: system
+      groupTitle: System
+      title: Subscriptions
+      iconClasses: fas fa-file-invoice-dollar
+      url: subscriptions
+      permission: manage-system
+
+    iconClasses: fas fa-repeat
+    includeHeader: false
+    includeFooter: false
+    includeSidebar: true
+    controls: all
+    simpleActions: ['show', 'edit', 'delete']
+
+
+
+  AvailableDatabase:
+      module: system
+      context: system
+      fields:
+        name:
+          fillable: true
+          type: string
+          validation:
+            - required|string|max:255
+          modifiers:
+            nullable: true
+
+        status:
+          fillable: true
+          type: select
+          options: available, assigned
+          modifiers:
+            default: available
+            nullable: true
+          validation:
+            - required|string|in:available
+          label: Status
+
+        tenant_id:
+          fillable: true
+          isExplicitConstraint: true
+          type: string
+          foreign:
+            table: tenants
+            column: id
+            onDelete: restrict
+          validation:
+            - required|exists:tenants,id
+          modifiers:
+            nullable: true
+
+
+      relations:
+        tenant:
+          type: belongsTo
+          model: App\Modules\System\Models\Tenant
+          foreignKey: tenant_id
+
+      sidebar:
+        add: true
+        context: system
+        groupTitle: System
+        title: Databases Pools
+        iconClasses: fas fa-cog
+        url: availabled-databases
+
+      iconClasses: fas fa-cog
+      includeHeader: false
+      includeFooter: false
+      includeSidebar: true
+      controls: all
+      simpleActions: ['show', 'edit', 'delete']
+
+
+
+#wizards:
+#  company_onboarding:
+#    module: system
+#    context: system
+#    title: Company Setup
+#    description: Complete your workspace configuration
+#
+#    models:
+#      primary: App\Modules\System\Models\Company
+#
+#    steps:
+#      - title: Company Identity
+#        model: App\Modules\System\Models\Company
+#        groups: [company_identity]
+#
+#      - title: Billing Address
+#        model: App\Modules\System\Models\Company
+#        groups: [billing_address]
+#
+#      - title: Review & Confirm
+#        description: Please review your company details
+#
+#    completion:
+#      title: "Workspace Ready!"
+#      message: "Your company workspace is now active."
+#      actions:
+#        - label: "Go to Dashboard"
+#          url: "/dashboard"
+#          primary: true
+#
+#        - label: "Manage Company Settings"
+#          url: "/system/companies/{id}/edit"
+
+
