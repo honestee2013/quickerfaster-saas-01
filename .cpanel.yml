@@ -56,13 +56,17 @@ deployment:
     - /bin/echo "Running Composer scripts..." >> $LOGFILE
     - /bin/sh -c 'cd "$DEPLOYPATH" && php "$COMPOSER_BIN" run-script post-autoload-dump >> "$LOGFILE" 2>&1' || /bin/echo "No composer scripts to run or script failed" >> $LOGFILE
 
-    # Run Artisan post-deploy tasks manually
+    # Artisan tasks with graceful route caching
     - /bin/echo "Running Artisan post-deploy tasks..." >> $LOGFILE
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan config:clear >> "$LOGFILE" 2>&1'
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan cache:clear >> "$LOGFILE" 2>&1'
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan package:discover >> "$LOGFILE" 2>&1'
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan config:cache >> "$LOGFILE" 2>&1'
-    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan route:cache >> "$LOGFILE" 2>&1'
+
+    # Graceful route caching - try but don't fail
+    - /bin/echo "Attempting route cache..." >> $LOGFILE
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan route:cache >> "$LOGFILE" 2>&1' || /bin/echo "Route caching skipped (normal for multi-tenant)" >> $LOGFILE
+
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan view:cache >> "$LOGFILE" 2>&1'
 
     # Run migrations
