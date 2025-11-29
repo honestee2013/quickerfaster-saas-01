@@ -2,6 +2,8 @@ deployment:
   tasks:
     # Paths
     - export COMPOSER_BIN=/home/quickerf/composer.phar
+    # - export REPOPATH=/home/quickerf/laravel_suites_repo/suites.quickerfaster.com
+    # - export DEPLOYPATH=/home/quickerf/public_html/suites.quickerfaster.com
     - export REPOPATH=/home/quickerf/laravel_suites_repo/quickerfaster.com
     - export DEPLOYPATH=/home/quickerf/public_html
     - export LOGDIR=/home/quickerf/deploy_logs
@@ -11,32 +13,27 @@ deployment:
     # Start log
     - /bin/echo "===== Deployment started at $(date) =====" >> $LOGFILE
 
-    # Set PHP version explicitly for deployment
-    - /bin/echo "Setting PHP version..." >> $LOGFILE
-    - export PATH=/opt/cpanel/ea-php81/root/usr/bin:$PATH >> $LOGFILE 2>&1
-
     # Pull latest changes from GitHub
     - /bin/echo "Pulling latest changes from GitHub..." >> $LOGFILE
     - cd $REPOPATH && /usr/bin/git pull origin main >> $LOGFILE 2>&1
 
-    # Clean destination folder but preserve critical files
+    # Clean destination folder but preserve .env, .cpanel.yml, storage, bootstrap/cache
     - /bin/echo "Cleaning destination folder..." >> $LOGFILE
-    - /bin/sh -c 'cd "$DEPLOYPATH" && /bin/ls -A | grep -vE "^(\.env|\.cpanel\.yml|storage|bootstrap)$" | xargs -I {} /bin/rm -rf "{}"' >> $LOGFILE 2>&1
+    - /bin/sh -c 'for f in $(/bin/ls -A "$DEPLOYPATH"); do
+        [ "$f" = ".env" ] || [ "$f" = ".cpanel.yml" ] || [ "$f" = "storage" ] || [ "$f" = "bootstrap/cache" ] || /bin/rm -rf "$DEPLOYPATH/$f";
+      done' >> $LOGFILE 2>&1
 
-    # Copy repository files to deployment path (exclude development files)
+    # Copy repository files to deployment path
     - /bin/echo "Copying files to deployment path..." >> $LOGFILE
-    - /bin/sh -c 'cd "$REPOPATH" && /bin/cp -a $(/bin/ls -A | grep -vE "^(\.git|\.env|\.cpanel\.yml|node_modules|tests|\.phpunit.*)$") "$DEPLOYPATH"' >> $LOGFILE 2>&1
+    - /bin/sh -c 'cd "$REPOPATH" && /bin/cp -a $(/bin/ls -A | grep -vE "^(\.git|\.env|\.cpanel\.yml)$") "$DEPLOYPATH"' >> $LOGFILE 2>&1
 
     # Ensure Laravel storage and cache directories exist and are writable
-    - /bin/echo "Setting up Laravel directories..." >> $LOGFILE
-    - /bin/sh -c 'mkdir -p "$DEPLOYPATH/storage/framework/cache/data" \
-                   "$DEPLOYPATH/storage/framework/sessions" \
-                   "$DEPLOYPATH/storage/framework/views" \
-                   "$DEPLOYPATH/bootstrap/cache" \
-                   "$DEPLOYPATH/storage/logs"' >> $LOGFILE 2>&1
-
-    - /bin/sh -c 'chmod -R 755 "$DEPLOYPATH/storage" "$DEPLOYPATH/bootstrap/cache"' >> $LOGFILE 2>&1
-    - /bin/sh -c 'chmod -R 775 "$DEPLOYPATH/storage/framework" "$DEPLOYPATH/storage/logs"' >> $LOGFILE 2>&1
+    - /bin/echo "Ensuring Laravel storage and cache folders exist..." >> $LOGFILE
+    - /bin/sh -c '/bin/mkdir -p $DEPLOYPATH/storage/framework/cache/data \
+                   $DEPLOYPATH/storage/framework/sessions \
+                   $DEPLOYPATH/storage/framework/views \
+                   $DEPLOYPATH/bootstrap/cache \
+                   $DEPLOYPATH/storage/logs' >> $LOGFILE 2>&1
 
     # Install Composer locally if missing
     - /bin/echo "Checking Composer..." >> $LOGFILE
@@ -44,43 +41,35 @@ deployment:
         /bin/echo "Downloading Composer..." >> $LOGFILE &&
         cd /home/quickerf &&
         /usr/bin/curl -sS https://getcomposer.org/installer -o composer-setup.php &&
-        /opt/cpanel/ea-php81/root/usr/bin/php composer-setup.php --quiet &&
+        php composer-setup.php --quiet &&
         rm composer-setup.php &&
         /bin/echo "Composer installed successfully" >> $LOGFILE;
       fi'
 
-    # Update composer.json for PHP 8.1 compatibility
-    - /bin/echo "Checking PHP version compatibility..." >> $LOGFILE
-    - /bin/sh -c 'cd "$DEPLOYPATH" && [ -f composer.json ] && sed -i "s/\"php\": \".*8\.[2-9].*\"/\"php\": \"^8.1\"/g" composer.json' >> $LOGFILE 2>&1 || true
-
-    # Install PHP dependencies with PHP 8.1
+    # Install PHP dependencies without running scripts (prevents cache errors)
     - /bin/echo "Installing PHP dependencies..." >> $LOGFILE
-    - /bin/sh -c 'cd "$DEPLOYPATH" && /opt/cpanel/ea-php81/root/usr/bin/php "$COMPOSER_BIN" install --no-dev --no-scripts --optimize-autoloader --ignore-platform-reqs >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php "$COMPOSER_BIN" install --no-dev --no-scripts --optimize-autoloader >> "$LOGFILE" 2>&1'
 
-    # Run composer scripts separately
-    - /bin/echo "Running Composer scripts..." >> $LOGFILE
-    - /bin/sh -c 'cd "$DEPLOYPATH" && /opt/cpanel/ea-php81/root/usr/bin/php "$COMPOSER_BIN" run-script post-autoload-dump >> "$LOGFILE" 2>&1' || true
-
-    # Run Artisan post-deploy tasks with proper PHP version
+    # Run Artisan post-deploy tasks manually
     - /bin/echo "Running Artisan post-deploy tasks..." >> $LOGFILE
-    - /bin/sh -c 'cd "$DEPLOYPATH" && /opt/cpanel/ea-php81/root/usr/bin/php artisan config:clear >> "$LOGFILE" 2>&1'
-    - /bin/sh -c 'cd "$DEPLOYPATH" && /opt/cpanel/ea-php81/root/usr/bin/php artisan cache:clear >> "$LOGFILE" 2>&1'
-    - /bin/sh -c 'cd "$DEPLOYPATH" && /opt/cpanel/ea-php81/root/usr/bin/php artisan package:discover >> "$LOGFILE" 2>&1'
-    - /bin/sh -c 'cd "$DEPLOYPATH" && /opt/cpanel/ea-php81/root/usr/bin/php artisan config:cache >> "$LOGFILE" 2>&1'
-    - /bin/sh -c 'cd "$DEPLOYPATH" && /opt/cpanel/ea-php81/root/usr/bin/php artisan route:cache >> "$LOGFILE" 2>&1'
-    - /bin/sh -c 'cd "$DEPLOYPATH" && /opt/cpanel/ea-php81/root/usr/bin/php artisan view:cache >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'php "$DEPLOYPATH/artisan" config:clear >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'php "$DEPLOYPATH/artisan" cache:clear >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'php "$DEPLOYPATH/artisan" package:discover >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'php "$DEPLOYPATH/artisan" config:cache >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'php "$DEPLOYPATH/artisan" route:cache >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'php "$DEPLOYPATH/artisan" view:cache >> "$LOGFILE" 2>&1'
 
     # Run migrations
     - /bin/echo "Running migrations..." >> $LOGFILE
-    - /bin/sh -c 'cd "$DEPLOYPATH" && /opt/cpanel/ea-php81/root/usr/bin/php artisan migrate --force >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'php "$DEPLOYPATH/artisan" migrate --force >> "$LOGFILE" 2>&1'
 
-    # Seed database (optional - comment out if not needed every deployment)
+    # Seed database
     - /bin/echo "Seeding database..." >> $LOGFILE
-    - /bin/sh -c 'cd "$DEPLOYPATH" && /opt/cpanel/ea-php81/root/usr/bin/php artisan db:seed --force >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'php "$DEPLOYPATH/artisan" db:seed --force >> "$LOGFILE" 2>&1'
 
     # Final cache cleanup
-    - /bin/echo "Final optimization..." >> $LOGFILE
-    - /bin/sh -c 'cd "$DEPLOYPATH" && /opt/cpanel/ea-php81/root/usr/bin/php artisan optimize >> "$LOGFILE" 2>&1'
+    - /bin/echo "Clearing caches..." >> $LOGFILE
+    - /bin/sh -c 'php "$DEPLOYPATH/artisan" optimize:clear >> "$LOGFILE" 2>&1'
 
     # End log
     - /bin/echo "===== Deployment finished at $(date) =====" >> $LOGFILE
