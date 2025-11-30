@@ -63,7 +63,8 @@ deployment:
     - /bin/echo "Attempting route cache..." >> $LOGFILE
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan route:cache >> "$LOGFILE" 2>&1' || /bin/echo "Route caching skipped (normal for multi-tenant)" >> $LOGFILE
 
-    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan view:cache >> "$LOGFILE" 2>&1'
+    # View caching - commented out due to livewire issues
+    # - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan view:cache >> "$LOGFILE" 2>&1'
 
     # Run migrations
     - /bin/echo "Running migrations..." >> $LOGFILE
