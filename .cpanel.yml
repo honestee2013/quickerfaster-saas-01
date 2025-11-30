@@ -15,7 +15,7 @@ deployment:
     - /bin/echo "Pulling latest changes from GitHub..." >> $LOGFILE
     - cd $REPOPATH && /usr/bin/git pull origin main >> $LOGFILE 2>&1
 
-    # Clean destination folder but preserve .env, .cpanel.yml, storage, bootstrap/cache
+    # Clean destination folder but preserve .env, .cpanel.yml, storage, bootstrap
     - /bin/echo "Cleaning destination folder..." >> $LOGFILE
     - /bin/sh -c 'for f in $(/bin/ls -A "$DEPLOYPATH"); do
         [ "$f" = ".env" ] || [ "$f" = ".cpanel.yml" ] || [ "$f" = "storage" ] || [ "$f" = "bootstrap" ] || /bin/rm -rf "$DEPLOYPATH/$f";
@@ -37,6 +37,10 @@ deployment:
                    $DEPLOYPATH/bootstrap/cache \
                    $DEPLOYPATH/storage/logs' >> $LOGFILE 2>&1
 
+    # Set proper permissions
+    - /bin/echo "Setting permissions..." >> $LOGFILE
+    - /bin/sh -c 'chmod -R 775 "$DEPLOYPATH/storage" "$DEPLOYPATH/bootstrap/cache"' >> $LOGFILE 2>&1
+
     # Install Composer locally if missing
     - /bin/echo "Checking Composer..." >> $LOGFILE
     - /bin/sh -c 'if [ ! -f "$COMPOSER_BIN" ]; then
@@ -48,18 +52,29 @@ deployment:
         /bin/echo "Composer installed successfully" >> $LOGFILE;
       fi'
 
-    # Install PHP dependencies without running scripts (prevents cache errors)
+    # Install PHP dependencies without running scripts
     - /bin/echo "Installing PHP dependencies..." >> $LOGFILE
-    - /bin/sh -c 'cd "$DEPLOYPATH" && php "$COMPOSER_BIN" install --no-dev --no-scripts --optimize-autoloader >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php "$COMPOSER_BIN" install --no-dev --no-scripts --optimize-autoloader --ignore-platform-reqs >> "$LOGFILE" 2>&1'
 
-    # Run Artisan post-deploy tasks manually
-    # Run Artisan post-deploy tasks WITHOUT view caching
-    - /bin/echo "Running Artisan post-deploy tasks..." >> $LOGFILE
+    # COMPREHENSIVE CACHE CLEARING FOR LIVEWIRE
+    - /bin/echo "Clearing all caches for Livewire compatibility..." >> $LOGFILE
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan config:clear >> "$LOGFILE" 2>&1'
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan cache:clear >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan view:clear >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan route:clear >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan clear-compiled >> "$LOGFILE" 2>&1'
+
+    # Clear Livewire cache specifically
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan livewire:discover >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'cd "$DEPLOYPATH" && rm -rf storage/framework/views/* 2>/dev/null || true' >> "$LOGFILE" 2>&1
+
+    # Run package discovery
+    - /bin/echo "Running package discovery..." >> $LOGFILE
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan package:discover >> "$LOGFILE" 2>&1'
+
+    # Cache config only (skip route and view caching)
+    - /bin/echo "Caching configuration..." >> $LOGFILE
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan config:cache >> "$LOGFILE" 2>&1'
-    
 
     # Run migrations
     - /bin/echo "Running migrations..." >> $LOGFILE
@@ -69,9 +84,15 @@ deployment:
     - /bin/echo "Seeding database..." >> $LOGFILE
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan db:seed --force >> "$LOGFILE" 2>&1'
 
-    # Final cache cleanup
-    - /bin/echo "Clearing caches..." >> $LOGFILE
-    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan optimize:clear >> "$LOGFILE" 2>&1'
+    # Final optimization (without view caching)
+    - /bin/echo "Final optimization..." >> $LOGFILE
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan optimize >> "$LOGFILE" 2>&1'
+
+
+    # Test Livewire component registration
+    - /bin/echo "Testing Livewire components..." >> $LOGFILE
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan livewire:list >> "$LOGFILE" 2>&1'
+
 
     # End log
     - /bin/echo "===== Deployment finished at $(date) =====" >> $LOGFILE
