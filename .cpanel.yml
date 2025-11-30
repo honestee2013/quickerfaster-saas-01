@@ -23,11 +23,11 @@ deployment:
 
     # Copy repository files to deployment path (EXCEPT public folder)
     - /bin/echo "Copying files to deployment path..." >> $LOG_FILE
-    - /bin/sh -c 'cd "$REPOSITORY_PATH" && /bin/cp -a $(/bin/ls -A | grep -vE "^(\.git|\.env|\.cpanel\.yml|public)$") "$DEPLOYMENT_PATH"' >> $LOG_FILE 2>&1
+    - /bin/sh -c 'cd "$REPOSITORY_PATH" && /bin/cp -a $(/bin/ls -A | grep -vE "^(\.git|\.env|\.cpanel\.yml)$") "$DEPLOYMENT_PATH"' >> $LOG_FILE 2>&1
 
     # COPY PUBLIC FOLDER CONTENTS SEPARATELY to root
-    - /bin/echo "Copying public folder contents..." >> $LOG_FILE
-    - /bin/sh -c 'cd "$REPOSITORY_PATH/public" && /bin/cp -a . "$DEPLOYMENT_PATH/"' >> $LOG_FILE 2>&1
+    # - /bin/echo "Copying public folder contents..." >> $LOG_FILE
+    # - /bin/sh -c 'cd "$REPOSITORY_PATH/public" && /bin/cp -a . "$DEPLOYMENT_PATH/"' >> $LOG_FILE 2>&1
 
     # Ensure Laravel storage and cache directories exist and are writable
     - /bin/echo "Ensuring Laravel storage and cache folders exist..." >> $LOG_FILE
@@ -80,8 +80,8 @@ deployment:
     - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php artisan migrate --force >> "$LOG_FILE" 2>&1'
 
     # Seed database
-    - /bin/echo "Seeding database..." >> $LOG_FILE
-    - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php artisan db:seed --force >> "$LOG_FILE" 2>&1'
+    # - /bin/echo "Seeding database..." >> $LOG_FILE
+    # - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php artisan db:seed --force >> "$LOG_FILE" 2>&1'
 
     # Final optimization (without view caching)
     - /bin/echo "Final optimization..." >> $LOG_FILE
