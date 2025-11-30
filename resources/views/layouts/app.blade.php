@@ -1,50 +1,33 @@
-<!--
-=========================================================
-* Soft UI Dashboard - v1.0.3
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/soft-ui-dashboard
-* Copyright 2021 Creative Tim (https://www.creative-tim.com)
-* Licensed under MIT (https://www.creative-tim.com/license)
-
-* Coded by Creative Tim
-
-=========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
--->
 <!DOCTYPE html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
 
-@if (\Request::is('rtl'))
-  <html dir="rtl" lang="ar">
-@else
-  <html lang="en" >
-@endif
+        <title>{{ config('app.name', 'Laravel') }}</title>
+        <meta name="csrf-token" content="{{ csrf_token() }}">
 
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-  @if (env('IS_DEMO'))
-      <x-demo-metas></x-demo-metas>
-  @endif
+        <!--     Fonts and icons     -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 
-  <link rel="apple-touch-icon" sizes="76x76" href="../assets/img/apple-icon.png">
-  <link rel="icon" type="image/png" href="../assets/img/favicon.png">
-  <title>
-    Soft UI Dashboard by Creative Tim
-  </title>
-  <!--     Fonts and icons     -->
-  <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700" rel="stylesheet" />
-  <!-- Nucleo Icons -->
-  <link href="../assets/css/nucleo-icons.css" rel="stylesheet" />
-  <link href="../assets/css/nucleo-svg.css" rel="stylesheet" />
-  <!-- Font Awesome Icons -->
-  <script src="https://kit.fontawesome.com/42d5adcbca.js" crossorigin="anonymous"></script>
-  <link href="../assets/css/nucleo-svg.css" rel="stylesheet" />
-  <!-- CSS Files -->
-  <link id="pagestyle" href="../assets/css/soft-ui-dashboard.css?v=1.0.3" rel="stylesheet" />
-</head>
+        @foreach(config('qf_laravel_ui.assets.css') as $cssFile)
+            <link href="{{ asset($cssFile) }}" rel="stylesheet" />
+        @endforeach
+
+
+        @livewireStyles
+
+        @stack('styles')
+        <style>
+            body {
+                font-family: 'Nunito', sans-serif;
+            }
+        </style>
+
+        @stack('head-scripts')
+    </head>
+
 
 <body class="g-sidenav-show  bg-gray-100 {{ (\Request::is('rtl') ? 'rtl' : (Request::is('virtual-reality') ? 'virtual-reality' : '')) }} ">
   @auth
@@ -63,28 +46,89 @@
     </div>
   @endif
     <!--   Core JS Files   -->
-  <script src="../assets/js/core/popper.min.js"></script>
-  <script src="../assets/js/core/bootstrap.min.js"></script>
-  <script src="../assets/js/plugins/perfect-scrollbar.min.js"></script>
-  <script src="../assets/js/plugins/smooth-scrollbar.min.js"></script>
-  <script src="../assets/js/plugins/fullcalendar.min.js"></script>
-  <script src="../assets/js/plugins/chartjs.min.js"></script>
-  @stack('rtl')
-  @stack('dashboard')
-  <script>
-    var win = navigator.platform.indexOf('Win') > -1;
-    if (win && document.querySelector('#sidenav-scrollbar')) {
-      var options = {
-        damping: '0.5'
-      }
-      Scrollbar.init(document.querySelector('#sidenav-scrollbar'), options);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ <!-- 1. Load Livewire -->
+    @livewireScripts
+
+    <!-- 2. Load Flatpickr library -->
+    <script src="/assets/js/plugins/flatpickr.min.js"></script>
+
+    <!-- 3. Register hook in global scope -->
+    <script>
+document.addEventListener('livewire:init', () => {
+
+
+    function initFlatpickr() {
+        if (typeof flatpickr === 'undefined') return;
+
+        document.querySelectorAll('.datepicker').forEach(el => {
+            if (el._flatpickr) el._flatpickr.destroy();
+        });
+
+        flatpickr('.datepicker', { dateFormat: "Y-m-d" });
+        flatpickr('.datetimepicker', { enableTime: true, dateFormat: "Y-m-d H:i" });
+        flatpickr('.timepicker', { enableTime: true, noCalendar: true, dateFormat: "H:i", time_24hr: true });
     }
-  </script>
 
-  <!-- Github buttons -->
-  <script async defer src="https://buttons.github.io/buttons.js"></script>
-  <!-- Control Center for Soft Dashboard: parallax effects, scripts for the example pages etc -->
-  <script src="../assets/js/soft-ui-dashboard.min.js?v=1.0.3"></script>
-</body>
+    // Initialize on first load
+    initFlatpickr();
 
+    // ✅ CORRECT LIVEMIRE 3 HOOK
+    Livewire.hook('morphed', ({ el, component }) => {
+
+        initFlatpickr();
+    });
+});
+    </script>
+
+
+        @foreach(config('qf_laravel_ui.assets.js') as $jsFile)
+            <script src="{{ asset($jsFile) }}"></script>
+        @endforeach
+
+
+
+
+<script>
+    // Handle browser navigation (back/forward buttons)
+    window.addEventListener('popstate', function(event) {
+        if (event.state && event.state.page) {
+            Livewire.dispatch('pageChanged', [event.state.page, event.state.params || {}]);
+        }
+    });
+
+    // Listen for page changes from Livewire and update URL
+    Livewire.on('page-changed', (data) => {
+        // Update browser history without reloading
+        history.pushState(
+            { page: data.page, params: data.params },
+            '',
+            '/' + data.page
+        );
+
+        // Update document title if needed
+        ///document.title = data.page.charAt(0).toUpperCase() + data.page.slice(1) + ' - ' + 'Your App Name';
+    });
+</script>
+
+@stack('script')
+
+
+
+
+    </body>
 </html>
+
