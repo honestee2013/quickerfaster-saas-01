@@ -71,7 +71,7 @@ deployment:
 
     # Seed database
     - /bin/echo "Seeding database..." >> $LOGFILE
-    - /bin/sh -c 'php "$DEPLOYPATH/artisan" db:seed --force >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'php "$DEPLOYPATH/artisan" db:seed --force >> "$LOGFILE" 2>&1' || /bin/echo "Seeding failed or no seeders to run." >> $LOGFILE
 
     # Final cache cleanup
     - /bin/echo "Clearing caches..." >> $LOGFILE
