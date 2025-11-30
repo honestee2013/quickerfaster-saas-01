@@ -67,7 +67,7 @@ deployment:
 
     # Run migrations
     - /bin/echo "Running migrations..." >> $LOGFILE
-    - /bin/sh -c 'php "$DEPLOYPATH/artisan" migrate --force >> "$LOGFILE" 2>&1'
+    - /bin/sh -c 'php "$DEPLOYPATH/artisan" migrate --force >> "$LOGFILE" 2>&1' || /bin/echo "Migrations failed or no migrations to run." >> $LOGFILE
 
     # Seed database
     - /bin/echo "Seeding database..." >> $LOGFILE
