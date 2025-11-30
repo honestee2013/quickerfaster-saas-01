@@ -53,18 +53,13 @@ deployment:
     - /bin/sh -c 'cd "$DEPLOYPATH" && php "$COMPOSER_BIN" install --no-dev --no-scripts --optimize-autoloader >> "$LOGFILE" 2>&1'
 
     # Run Artisan post-deploy tasks manually
+    # Run Artisan post-deploy tasks WITHOUT view caching
     - /bin/echo "Running Artisan post-deploy tasks..." >> $LOGFILE
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan config:clear >> "$LOGFILE" 2>&1'
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan cache:clear >> "$LOGFILE" 2>&1'
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan package:discover >> "$LOGFILE" 2>&1'
     - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan config:cache >> "$LOGFILE" 2>&1'
-
-    # Graceful route caching - try but don't fail
-    - /bin/echo "Attempting route cache..." >> $LOGFILE
-    - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan route:cache >> "$LOGFILE" 2>&1' || /bin/echo "Route caching skipped (normal for multi-tenant)" >> $LOGFILE
-
-    # View caching - commented out due to livewire issues
-    # - /bin/sh -c 'cd "$DEPLOYPATH" && php artisan view:cache >> "$LOGFILE" 2>&1'
+    
 
     # Run migrations
     - /bin/echo "Running migrations..." >> $LOGFILE
