@@ -14,7 +14,7 @@
     </x-slot>
 
    
-    <livewire:qf::data-tables.data-table-manager :selectedItemId="$id??null" model="App\Modules\system\Models\Company"
+    <livewire:qf::data-tables.data-table-manager :selectedItemId="$id??null" model="App\Modules\System\Models\Company"
             pageTitle="Companies"
             queryFilters=[]
             :hiddenFields="[

@@ -10,7 +10,7 @@
     
 
    
-    <livewire:qf::data-tables.data-table-manager :selectedItemId="$id??null" model="App\Modules\hr\Models\ClockEvent"
+    <livewire:qf::data-tables.data-table-manager :selectedItemId="$id??null" model="App\Modules\Hr\Models\ClockEvent"
             pageTitle="Clock Events"
             queryFilters=[]
             :hiddenFields="[

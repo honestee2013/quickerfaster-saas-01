@@ -14,7 +14,7 @@
     </x-slot>
 
    
-    <livewire:qf::data-tables.data-table-manager :selectedItemId="$id??null" model="App\Modules\hr\Models\EmployeePayrollProfile"
+    <livewire:qf::data-tables.data-table-manager :selectedItemId="$id??null" model="App\Modules\Hr\Models\EmployeePayrollProfile"
             pageTitle="Payroll Employees"
             queryFilters=[]
             :hiddenFields="[

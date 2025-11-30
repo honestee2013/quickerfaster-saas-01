@@ -66,6 +66,7 @@ Route::middleware(['web'])->group(function () {
 
 
 
+
     Route::group(['middleware' => 'guest'], function () {
         Route::get('/register', [RegisterController::class, 'create']);
         Route::post('/register', [RegisterController::class, 'store']);
@@ -77,7 +78,6 @@ Route::middleware(['web'])->group(function () {
         Route::post('/reset-password', [ChangePasswordController::class, 'changePassword'])->name('central.password.update');
 
     });
-
 
 
 
