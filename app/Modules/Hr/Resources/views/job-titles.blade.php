@@ -9,9 +9,7 @@
         <livewire:qf::layouts.navs.sidebar context="settings"  moduleName="hr">
     </x-slot>
     
-    <x-slot name="bottomBar">
-        <livewire:qf::layouts.navs.bottom-bar context="settings" moduleName="hr">
-    </x-slot>
+    
 
    
     <livewire:qf::data-tables.data-table-manager :selectedItemId="$id??null" model="App\Modules\Hr\Models\JobTitle"

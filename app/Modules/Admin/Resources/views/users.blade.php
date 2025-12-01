@@ -9,9 +9,7 @@
         <livewire:qf::layouts.navs.sidebar context="users & permissions"  moduleName="admin">
     </x-slot>
     
-    <x-slot name="bottomBar">
-        <livewire:qf::layouts.navs.bottom-bar context="users & permissions" moduleName="admin">
-    </x-slot>
+    
 
    
     <livewire:qf::data-tables.data-table-manager :selectedItemId="$id??null" model="App\Modules\Admin\Models\User"

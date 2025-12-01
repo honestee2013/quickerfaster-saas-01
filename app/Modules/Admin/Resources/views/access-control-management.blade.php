@@ -8,6 +8,10 @@
         <livewire:qf::layouts.navs.sidebar context="Users & Permissions"  moduleName="admin">
     </x-slot>
 
+    <x-slot name="bottomBar">
+        <livewire:qf::layouts.navs.bottom-bar context="Users & Permissions" moduleName="admin">
+    </x-slot>
+
 
    <livewire:admin.access-control-manager
         :selectedModule="$selectedModule?? null"
