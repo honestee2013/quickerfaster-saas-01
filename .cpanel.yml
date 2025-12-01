@@ -2,93 +2,69 @@ deployment:
   tasks:
     # Paths
     - export COMPOSER_BIN=/home/quickerf/composer.phar
-    - export REPOSITORY_PATH=/home/quickerf/laravel_suites_repo/quickerfaster.com
-    - export DEPLOYMENT_PATH=/home/quickerf/public_html
-    - export LOG_DIRECTORY=/home/quickerf/deploy_logs
-    - mkdir -p $LOG_DIRECTORY
-    - export LOG_FILE=$LOG_DIRECTORY/deploy_$(date +"%Y-%m-%d_%H-%M-%S").log
+    # - export REPOPATH=/home/quickerf/laravel_suites_repo/suites.quickerfaster.com
+    # - export DEPLOYPATH=/home/quickerf/public_html/suites.quickerfaster.com
+    - export REPOPATH=/home/quickerf/laravel_suites_repo/quickerfaster.com
+    - export DEPLOYPATH=/home/quickerf/public_html
+    - export LOGDIR=/home/quickerf/deploy_logs
+    - mkdir -p $LOGDIR
+    - export LOGFILE=$LOGDIR/deploy_$(date +"%Y-%m-%d_%H-%M-%S").log
 
     # Start log
-    - /bin/echo "===== Deployment started at $(date) =====" >> $LOG_FILE
+    - /bin/echo "===== Deployment started at $(date) =====" >> $LOGFILE
 
     # Pull latest changes from GitHub
-    - /bin/echo "Pulling latest changes from GitHub..." >> $LOG_FILE
-    - cd $REPOSITORY_PATH && /usr/bin/git pull origin main >> $LOG_FILE 2>&1
+    - /bin/echo "Pulling latest changes from GitHub..." >> $LOGFILE
+    - cd $REPOPATH && /usr/bin/git pull origin main >> $LOGFILE 2>&1
 
-    # Clean destination folder but preserve .env, .cpanel.yml, storage, bootstrap
-    - /bin/echo "Cleaning destination folder..." >> $LOG_FILE
-    - /bin/sh -c 'for f in $(/bin/ls -A "$DEPLOYMENT_PATH"); do
-        [ "$f" = ".env" ] || [ "$f" = ".cpanel.yml" ] || [ "$f" = "storage" ] || [ "$f" = "bootstrap" ] || /bin/rm -rf "$DEPLOYMENT_PATH/$f";
-      done' >> $LOG_FILE 2>&1
+    # Clean destination folder but preserve .env, .cpanel.yml, storage, bootstrap/cache
+    - /bin/echo "Cleaning destination folder..." >> $LOGFILE
+    - /bin/sh -c 'for f in $(/bin/ls -A "$DEPLOYPATH"); do
+        [ "$f" = ".env" ] || [ "$f" = ".cpanel.yml" ] || [ "$f" = "storage" ] || [ "$f" = "bootstrap/cache" ] || /bin/rm -rf "$DEPLOYPATH/$f";
+      done' >> $LOGFILE 2>&1
 
-    # Copy repository files to deployment path (EXCEPT public folder)
-    - /bin/echo "Copying files to deployment path..." >> $LOG_FILE
-    - /bin/sh -c 'cd "$REPOSITORY_PATH" && /bin/cp -a $(/bin/ls -A | grep -vE "^(\.git|\.env|\.cpanel\.yml)$") "$DEPLOYMENT_PATH"' >> $LOG_FILE 2>&1
-
-    # COPY PUBLIC FOLDER CONTENTS SEPARATELY to root
-    # - /bin/echo "Copying public folder contents..." >> $LOG_FILE
-    # - /bin/sh -c 'cd "$REPOSITORY_PATH/public" && /bin/cp -a . "$DEPLOYMENT_PATH/"' >> $LOG_FILE 2>&1
+    # Copy repository files to deployment path
+    - /bin/echo "Copying files to deployment path..." >> $LOGFILE
+    - /bin/sh -c 'cd "$REPOPATH" && /bin/cp -a $(/bin/ls -A | grep -vE "^(\.git|\.env|\.cpanel\.yml)$") "$DEPLOYPATH"' >> $LOGFILE 2>&1
 
     # Ensure Laravel storage and cache directories exist and are writable
-    - /bin/echo "Ensuring Laravel storage and cache folders exist..." >> $LOG_FILE
-    - /bin/sh -c '/bin/mkdir -p $DEPLOYMENT_PATH/storage/framework/cache/data \
-                   $DEPLOYMENT_PATH/storage/framework/sessions \
-                   $DEPLOYMENT_PATH/storage/framework/views \
-                   $DEPLOYMENT_PATH/bootstrap/cache \
-                   $DEPLOYMENT_PATH/storage/logs' >> $LOG_FILE 2>&1
-
-    # Set proper permissions
-    - /bin/echo "Setting permissions..." >> $LOG_FILE
-    - /bin/sh -c 'chmod -R 775 "$DEPLOYMENT_PATH/storage" "$DEPLOYMENT_PATH/bootstrap/cache"' >> $LOG_FILE 2>&1
+    - /bin/echo "Ensuring Laravel storage and cache folders exist..." >> $LOGFILE
+    - /bin/sh -c '/bin/mkdir -p $DEPLOYPATH/storage/framework/cache/data \
+                   $DEPLOYPATH/storage/framework/sessions \
+                   $DEPLOYPATH/storage/framework/views \
+                   $DEPLOYPATH/bootstrap/cache \
+                   $DEPLOYPATH/storage/logs' >> $LOGFILE 2>&1
 
     # Install Composer locally if missing
-    - /bin/echo "Checking Composer..." >> $LOG_FILE
+    - /bin/echo "Checking Composer..." >> $LOGFILE
     - /bin/sh -c 'if [ ! -f "$COMPOSER_BIN" ]; then
-        /bin/echo "Downloading Composer..." >> $LOG_FILE &&
+        /bin/echo "Downloading Composer..." >> $LOGFILE &&
         cd /home/quickerf &&
         /usr/bin/curl -sS https://getcomposer.org/installer -o composer-setup.php &&
         php composer-setup.php --quiet &&
         rm composer-setup.php &&
-        /bin/echo "Composer installed successfully" >> $LOG_FILE;
+        /bin/echo "Composer installed successfully" >> $LOGFILE;
       fi'
 
-    # Install PHP dependencies without running scripts
-    - /bin/echo "Installing PHP dependencies..." >> $LOG_FILE
-    - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php "$COMPOSER_BIN" install --no-dev --no-scripts --optimize-autoloader --ignore-platform-reqs >> "$LOG_FILE" 2>&1'
+    # Install PHP dependencies without running scripts (prevents cache errors)
+    - /bin/echo "Installing PHP dependencies..." >> $LOGFILE
+    - /bin/sh -c 'cd "$DEPLOYPATH" && php "$COMPOSER_BIN" install --no-dev --no-scripts --optimize-autoloader >> "$LOGFILE" 2>&1'
 
-    # COMPREHENSIVE CACHE CLEARING FOR LIVEWIRE
-    - /bin/echo "Clearing all caches for Livewire compatibility..." >> $LOG_FILE
-    - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php artisan config:clear >> "$LOG_FILE" 2>&1'
-    - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php artisan cache:clear >> "$LOG_FILE" 2>&1'
-    - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php artisan view:clear >> "$LOG_FILE" 2>&1'
-    - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php artisan route:clear >> "$LOG_FILE" 2>&1'
-    - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php artisan clear-compiled >> "$LOG_FILE" 2>&1'
 
-    # Manual view file removal (important for Livewire)
-    - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && rm -rf storage/framework/views/* 2>/dev/null || true' >> "$LOG_FILE" 2>&1
 
-    # Run package discovery (this handles Livewire component discovery)
-    - /bin/echo "Running package discovery..." >> $LOG_FILE
-    - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php artisan package:discover >> "$LOG_FILE" 2>&1'
-
-    # Cache config only (skip route and view caching)
-    - /bin/echo "Caching configuration..." >> $LOG_FILE
-    - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php artisan config:cache >> "$LOG_FILE" 2>&1'
 
     # Run migrations
-    - /bin/echo "Running migrations..." >> $LOG_FILE
-    - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php artisan migrate --force >> "$LOG_FILE" 2>&1'
+    - /bin/echo "Running migrations..." >> $LOGFILE
+    - /bin/sh -c 'php "$DEPLOYPATH/artisan" migrate --force >> "$LOGFILE" 2>&1'
 
     # Seed database
-    # - /bin/echo "Seeding database..." >> $LOG_FILE
-    # - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php artisan db:seed --force >> "$LOG_FILE" 2>&1'
+    - /bin/echo "Seeding database..." >> $LOGFILE
+    - /bin/sh -c 'php "$DEPLOYPATH/artisan" db:seed --force >> "$LOGFILE" 2>&1'
 
-    # Final optimization (without view caching)
-    - /bin/echo "Final optimization..." >> $LOG_FILE
-    - /bin/sh -c 'cd "$DEPLOYMENT_PATH" && php artisan optimize >> "$LOG_FILE" 2>&1'
+
 
     # End log
-    - /bin/echo "===== Deployment finished at $(date) =====" >> $LOG_FILE
+    - /bin/echo "===== Deployment finished at $(date) =====" >> $LOGFILE
 
     # Rotate logs - keep only last 5
-    - /bin/ls -1t $LOG_DIRECTORY/deploy_*.log | /usr/bin/tail -n +6 | /bin/xargs -r /bin/rm --
+    - /bin/ls -1t $LOGDIR/deploy_*.log | /usr/bin/tail -n +6 | /bin/xargs -r /bin/rm --
